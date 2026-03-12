@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* Offset for fixed navbar (promo + main nav + category row) – prevents content overlap on Shop, Contact, etc. */
+:root {
+  --navbar-height: 200px;
+}
+
+/* Hide scrollbar for nav dropdowns */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Infinite marquee – promo strip announcement */
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-25%);
+  }
+}
+
+.marquee-track {
+  animation: marquee-scroll 25s linear infinite;
+  width: max-content;
+}
+
+.marquee-wrapper:hover .marquee-track {
+  animation-play-state: paused;
+}

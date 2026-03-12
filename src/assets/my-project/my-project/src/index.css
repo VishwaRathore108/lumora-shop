@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Professional Light Theme */
+body {
+  background-color: #ffffff; 
+  color: #0f172a; /* Dark Slate text for reading */
+  font-family: 'Inter', sans-serif;
+}
+
+/* Links aur Buttons ke liye smooth behavior */
+html {
+  scroll-behavior: smooth;
+}

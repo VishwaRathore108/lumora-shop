@@ -1,0 +1,56 @@
+// Salon Equipment products – used in BeautySection & Shop
+// High-quality placeholder images for salon furniture
+
+export const SALON_PRODUCTS = [
+  {
+    id: 'salon-hydraulic-chair',
+    name: 'Hydraulic Salon Chairs',
+    slug: 'hydraulic-salon-chairs',
+    description: 'Professional hydraulic reclining chairs with smooth height adjustment',
+    image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&h=600&fit=crop',
+    badge: 'Starting Price',
+    startingPrice: '₹18,500',
+    type: 'chair',
+  },
+  {
+    id: 'salon-shampoo-chair',
+    name: 'Shampoo Chairs',
+    slug: 'shampoo-chairs',
+    description: 'Ergonomic shampoo bowls with neck support for comfortable washes',
+    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&h=600&fit=crop',
+    badge: 'Starting Price',
+    startingPrice: '₹22,000',
+    type: 'chair',
+  },
+  {
+    id: 'salon-normal-chair',
+    name: 'Normal Salon Chairs',
+    slug: 'normal-salon-chairs',
+    description: 'Classic salon chairs for cutting, styling & general use',
+    image: 'https://images.unsplash.com/photo-1622287162716-f311bad1e2f9?w=600&h=600&fit=crop',
+    badge: 'Starting Price',
+    startingPrice: '₹9,999',
+    type: 'chair',
+  },
+  {
+    id: 'salon-korean-bed',
+    name: 'Korean Beds',
+    slug: 'korean-beds',
+    description: 'Premium spa & facial beds with adjustable positioning',
+    image: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=600&h=600&fit=crop',
+    badge: 'Premium Quality',
+    startingPrice: '₹45,000',
+    type: 'bed',
+    isPremium: true,
+  },
+  {
+    id: 'salon-accessories',
+    name: 'Salon Accessories',
+    slug: 'salon-accessories',
+    description: 'Capes, trolleys, dryers, mirrors & essential salon tools',
+    image: 'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=600&h=600&fit=crop',
+    badge: 'Starting Price',
+    startingPrice: '₹2,499',
+    type: 'accessories',
+  },
+];
