@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 
 // Import Pages & Components
 import Loader from './components/Loader';
@@ -85,6 +85,18 @@ const Home = () => {
   );
 };
 
+const ScrollToTop = () => {
+  const { pathname, search, hash } = useLocation();
+
+  useEffect(() => {
+    // Keep hash-link behavior for in-page anchors.
+    if (hash) return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname, search, hash]);
+
+  return null;
+};
+
 function App() {
   const [loading, setLoading] = useState(true);
 
@@ -92,6 +104,7 @@ function App() {
     <>
       {loading && <Loader onComplete={() => setLoading(false)} />}
       <BrowserRouter>
+        <ScrollToTop />
         <FixedActions />
         <Routes>
           <Route path="/" element={<Home />} />

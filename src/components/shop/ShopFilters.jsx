@@ -55,6 +55,9 @@ const ShopFilters = ({
   onApply,
   onClear,
   hasActiveFilters,
+  sort,
+  onSortChange,
+  totalCount,
 }) => {
   const [openSections, setOpenSections] = useState({
     category: true,
@@ -240,7 +243,9 @@ const ShopFilters = ({
         </ul>
       </FilterSection>
 
-      <FilterSection id="price" title="Price Range" visible openSections={openSections} onToggle={toggleSection}>
+      <FilterSection id="price" title="
+      
+      nge" visible openSections={openSections} onToggle={toggleSection}>
         <div className="space-y-3">
           <div className="flex gap-2 items-center">
             <input
@@ -356,21 +361,42 @@ const ShopFilters = ({
 
   return (
     <>
-      <div className="lg:hidden flex items-center justify-end gap-2 mb-4">
-        <button
-          type="button"
-          onClick={() => setMobileOpen(true)}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${hasActiveFilters
-              ? 'bg-[#985991] text-white shadow-md'
-              : 'bg-white border border-gray-200 text-gray-700 hover:border-[#985991] hover:text-[#985991]'
+      <div className="lg:hidden sticky top-[calc(var(--navbar-height,72px)+2rem)] z-30 bg-white/95 backdrop-blur-sm border border-gray-100 rounded-xl p-2 mb-3">
+        <div className="grid grid-cols-2 gap-2 w-full">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className={`inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold text-center transition-colors ${
+              hasActiveFilters
+                ? 'bg-[#985991] text-white shadow-md'
+                : 'bg-white border border-gray-200 text-gray-700 hover:border-[#985991] hover:text-[#985991]'
             }`}
-        >
-          <SlidersHorizontal size={18} />
-          Filters
-          {hasActiveFilters && (
-            <span className="min-w-[18px] h-[18px] rounded-full bg-white/20 flex items-center justify-center text-xs">•</span>
-          )}
-        </button>
+          >
+            <SlidersHorizontal size={16} />
+            Filters
+            {hasActiveFilters && (
+              <span className="min-w-[18px] h-[18px] rounded-full bg-white/20 flex items-center justify-center text-[10px]">•</span>
+            )}
+          </button>
+
+          <select
+            value={sort || ''}
+            onChange={(e) => onSortChange && onSortChange(e.target.value)}
+            className="w-full min-w-0 text-xs border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 text-center focus:outline-none focus:border-[#985991]"
+          >
+            <option value="">Sort: Newest</option>
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="popular">Popular</option>
+            <option value="discount">Discount</option>
+          </select>
+        </div>
+        {!Number.isNaN(totalCount) && totalCount != null && (
+          <p className="text-[11px] text-gray-500 text-right mt-1 pr-0.5">
+            {totalCount} product{totalCount !== 1 ? 's' : ''}
+          </p>
+        )}
       </div>
 
       {mobileOpen && (

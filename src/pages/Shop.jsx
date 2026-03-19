@@ -244,7 +244,7 @@ const Shop = () => {
             )}
           </div> */}
 
-          <div className="flex gap-8">
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
             <ShopFilters
               filterOptions={filterOptions}
               loading={optionsLoading}
@@ -273,7 +273,7 @@ const Shop = () => {
               totalCount={pagination.total}
             />
 
-            <main className="flex-1 min-w-0">
+            <main className="flex-1 min-w-0 w-full">
               {/* Desktop toolbar: count + sort */}
               <div className="hidden lg:flex items-center justify-between gap-3 mb-4 lg:mb-6">
                 <p className="text-sm text-gray-500">
