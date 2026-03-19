@@ -780,11 +780,11 @@ export default function AddNewProducts() {
                   </div>
                 </div>
               )}
-              {(formData.productType === 'skincare' || formData.productType === 'bodycare') && (
+              {(formData.productType === 'skincare' || formData.productType === 'bodycare' || formData.productType === 'haircare') && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Size label</label>
-                    <input type="text" placeholder="e.g. 50 ml" value={v.attributes?.sizeLabel || ''} onChange={(e) => updateVariant(i, 'attributes.sizeLabel', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    <input type="text" placeholder={formData.productType === 'haircare' ? 'e.g. 200 ml, 500 ml' : 'e.g. 50 ml'} value={v.attributes?.sizeLabel || ''} onChange={(e) => updateVariant(i, 'attributes.sizeLabel', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Size value</label>
@@ -799,6 +799,24 @@ export default function AddNewProducts() {
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">SPF (optional)</label>
                     <input type="number" min="0" placeholder="50" value={v.attributes?.spf ?? ''} onChange={(e) => updateVariant(i, 'attributes.spf', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                </div>
+              )}
+              {(formData.productType === 'fragrance' || formData.productType === 'tool' || formData.productType === 'accessory') && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Size / variant label</label>
+                    <input type="text" placeholder="e.g. 50 ml, 100 ml" value={v.attributes?.sizeLabel || ''} onChange={(e) => updateVariant(i, 'attributes.sizeLabel', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Size value</label>
+                    <input type="number" min="0" step="0.01" placeholder="50" value={v.attributes?.sizeValue ?? ''} onChange={(e) => updateVariant(i, 'attributes.sizeValue', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Unit</label>
+                    <select value={v.attributes?.sizeUnit || 'ml'} onChange={(e) => updateVariant(i, 'attributes.sizeUnit', e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                      {SIZE_UNITS.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
+                    </select>
                   </div>
                 </div>
               )}

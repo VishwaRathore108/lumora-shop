@@ -33,9 +33,8 @@ const OptionButton = ({ active, onClick, label }) => (
   <button
     type="button"
     onClick={onClick}
-    className={`block w-full text-left text-sm py-2 px-3 rounded-lg transition-colors truncate ${
-      active ? 'bg-[#985991] text-white font-medium' : 'text-gray-600 hover:bg-[#985991]/10 hover:text-[#985991]'
-    }`}
+    className={`block w-full text-left text-sm py-2 px-3 rounded-lg transition-colors truncate ${active ? 'bg-[#985991] text-white font-medium' : 'text-gray-600 hover:bg-[#985991]/10 hover:text-[#985991]'
+      }`}
   >
     {label}
   </button>
@@ -361,11 +360,10 @@ const ShopFilters = ({
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-            hasActiveFilters
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${hasActiveFilters
               ? 'bg-[#985991] text-white shadow-md'
               : 'bg-white border border-gray-200 text-gray-700 hover:border-[#985991] hover:text-[#985991]'
-          }`}
+            }`}
         >
           <SlidersHorizontal size={18} />
           Filters

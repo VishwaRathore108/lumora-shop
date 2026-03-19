@@ -393,7 +393,7 @@ const Navbar = () => {
             onClick={() => setIsMobileNavOpen(false)}
             aria-hidden
           />
-          <div className="absolute inset-y-0 left-0 w-full max-w-md bg-white shadow-2xl flex flex-col">
+          <div className="absolute h-screen z-50 inset-y-0 left-0 w-full max-w-md bg-white shadow-2xl flex flex-col">
             <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
               <h2 className="text-base font-semibold tracking-[0.18em] uppercase text-gray-900">
                 Shop By

@@ -161,22 +161,22 @@ const Hero = () => {
      
 
       {/* Main hero content */}
-      <div className="relative z-10 max-w-7xl mx-auto w-full mt-20 px-4 pt-[7rem] pb-16 md:pt-[8rem] md:pb-20">
+      <div className="relative z-10 max-w-7xl mx-auto w-full mt-16 px-4 pt-24 pb-16 sm:mt-20 sm:pt-[7rem] md:pt-[8rem] md:pb-20">
         <div ref={contentRef} className="grid lg:grid-cols-2 gap-10 items-center">
           {/* Left copy */}
-          <div className="max-w-xl">
+          <div className="max-w-xl text-center lg:text-left px-2 sm:px-4">
             <p className="text-[#DCC9DA] text-[11px] md:text-xs font-medium tracking-[0.32em] uppercase mb-3">
               The Beauty Hub
             </p>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif font-semibold text-white leading-tight mb-4">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-semibold text-white leading-tight mb-4 break-words whitespace-normal">
               Discover the
               <br />
               <span className="text-[#DCC9DA]">Secret of Natural Beauty</span>
             </h1>
-            <p className="text-white/80 text-sm md:text-base leading-relaxed mb-7 max-w-md">
+            <p className="text-white/80 text-sm md:text-base leading-relaxed mb-7 max-w-md mx-auto lg:mx-0 px-2 sm:px-0">
               Clean, vegan essentials crafted to hydrate, brighten, and protect your skin—perfect for your everyday ritual and Indian climate.
             </p>
-            <div className="flex flex-wrap items-center gap-4 mb-6">
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-6">
               <button
                 onClick={() => navigate('/shop')}
                 className="bg-white text-[#985991] px-8 py-3 rounded-full text-sm font-semibold shadow-[0_14px_40px_rgba(0,0,0,0.45)] hover:bg-[#DCC9DA] hover:text-white transition-all"
@@ -197,7 +197,7 @@ const Hero = () => {
                 Watch Video
               </button>
             </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-white/70">
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 text-xs text-white/70">
               <span>Clean</span>
               <span className="text-[#DCC9DA]">·</span>
               <span>Vegan</span>
@@ -208,7 +208,7 @@ const Hero = () => {
 
           {/* Right: Deal of the Hour card */}
           <div className="relative flex justify-center mt-6 lg:mt-0">
-            <div className="w-full max-w-xs lg:max-w-sm bg-black/45 border border-white/15 rounded-3xl px-5 py-6 backdrop-blur-md shadow-[0_24px_60px_rgba(0,0,0,0.55)]">
+            <div className="w-full max-w-sm bg-black/45 border border-white/15 rounded-3xl px-4 sm:px-5 py-5 sm:py-6 backdrop-blur-md shadow-[0_24px_60px_rgba(0,0,0,0.55)]">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[11px] font-semibold tracking-[0.25em] uppercase text-[#DCC9DA]">
                   Deal of the Hour
@@ -232,11 +232,11 @@ const Hero = () => {
                       style={{ width: `${100 / DEAL_PRODUCTS.length}%` }}
                     >
                       <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-[#6B3D66] via-[#985991] to-[#A86BA1] p-4 text-white">
-                        <div className="flex gap-4 items-center">
-                          <div className="w-20 h-24 rounded-xl overflow-hidden bg-white/10 border border-white/20 flex-shrink-0 shadow-md">
+                        <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
+                          <div className="w-24 h-24 sm:w-20 sm:h-24 rounded-xl overflow-hidden bg-white/10 border border-white/20 flex-shrink-0 shadow-md">
                             <img src={deal.image} alt={deal.name} className="w-full h-full object-cover" />
                           </div>
-                          <div className="flex-1 space-y-1 min-w-0">
+                          <div className="flex-1 space-y-1 min-w-0 text-center sm:text-left">
                             <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-white/70">
                               <Tag size={12} />
                               Limited Time

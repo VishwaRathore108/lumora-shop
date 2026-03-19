@@ -1,8 +1,21 @@
 @import "tailwindcss";
 
 /* Offset for fixed navbar (promo + main nav + category row) – prevents content overlap on Shop, Contact, etc. */
+/* Mobile‑first: small header on phones, larger on desktop */
 :root {
-  --navbar-height: 200px;
+  --navbar-height: 72px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --navbar-height: 112px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --navbar-height: 168px;
+  }
 }
 
 /* Hide scrollbar for nav dropdowns */

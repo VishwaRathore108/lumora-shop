@@ -231,7 +231,7 @@ const ProductDetails = () => {
       <div className="max-w-7xl mx-auto px-4 pb-10" style={{ paddingTop: 'var(--navbar-height, 200px)' }}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Left: Image gallery – thumbnails on left, fixed-size main image with prev/next (higher z so zoom preview stays on top) */}
-          <div className="product-animate flex gap-3 relative z-20">
+          <div className="product-animate flex flex-col lg:flex-row gap-3 relative z-20">
             {/* Thumbnails: horizontal row on mobile (below main), vertical column on desktop (left of main) */}
             <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto lg:max-h-[520px] py-1 order-2 lg:order-1 flex-shrink-0 lg:flex-shrink-0">
               {images.map((img, idx) => (
@@ -239,9 +239,8 @@ const ProductDetails = () => {
                   key={idx}
                   type="button"
                   onClick={() => setActiveImg(idx)}
-                  className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all ${
-                    activeImg === idx ? 'border-[#985991] ring-2 ring-[#985991]/30' : 'border-gray-200 opacity-70 hover:opacity-100'
-                  }`}
+                  className={`w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all ${activeImg === idx ? 'border-[#985991] ring-2 ring-[#985991]/30' : 'border-gray-200 opacity-70 hover:opacity-100'
+                    }`}
                 >
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
@@ -397,9 +396,8 @@ const ProductDetails = () => {
                         key={idx}
                         type="button"
                         onClick={() => setSelectedVariantIndex(idx)}
-                        className={`rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition-all flex items-center gap-2 ${
-                          isSelected ? 'border-[#985991] ring-2 ring-[#985991]/30' : 'border-gray-200 hover:border-gray-300'
-                        } ${v.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''} ${!shadeCode ? 'bg-white text-gray-700' : ''}`}
+                        className={`rounded-xl border-2 px-4 py-2.5 text-sm font-medium transition-all flex items-center gap-2 ${isSelected ? 'border-[#985991] ring-2 ring-[#985991]/30' : 'border-gray-200 hover:border-gray-300'
+                          } ${v.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''} ${!shadeCode ? 'bg-white text-gray-700' : ''}`}
                         disabled={v.stock <= 0}
                         title={v.stock <= 0 ? 'Out of stock' : label}
                         style={shadeCode ? { backgroundColor: shadeCode, borderColor: isSelected ? '#985991' : shadeCode, color: useLightText ? '#fff' : '#1f2937' } : {}}

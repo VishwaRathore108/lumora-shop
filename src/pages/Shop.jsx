@@ -260,10 +260,22 @@ const Shop = () => {
               onApply={applyFilters}
               onClear={clearFilters}
               hasActiveFilters={hasFilters}
+              sort={sort}
+              onSortChange={(v) => {
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  if (v) next.set('sort', v);
+                  else next.delete('sort');
+                  next.delete('page');
+                  return next;
+                });
+              }}
+              totalCount={pagination.total}
             />
 
             <main className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+              {/* Desktop toolbar: count + sort */}
+              <div className="hidden lg:flex items-center justify-between gap-3 mb-4 lg:mb-6">
                 <p className="text-sm text-gray-500">
                   {!loading && !error && `${pagination.total} product${pagination.total !== 1 ? 's' : ''}`}
                 </p>
@@ -279,7 +291,7 @@ const Shop = () => {
                       return next;
                     });
                   }}
-                  className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:border-[#985991]"
+                  className="w-56 text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:border-[#985991]"
                 >
                   <option value="">Sort: Newest</option>
                   <option value="newest">Newest</option>
@@ -291,7 +303,7 @@ const Shop = () => {
               </div>
 
               {loading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                   {[...Array(6)].map((_, i) => (
                     <div key={i} className="animate-pulse rounded-2xl bg-gray-100 aspect-[4/5]" />
                   ))}
@@ -308,7 +320,7 @@ const Shop = () => {
                 </div>
               ) : products.length > 0 ? (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                     {products.map((product) => (
                       <ProductCard key={product._id} {...mapProductToCard(product)} />
                     ))}

@@ -49,7 +49,7 @@ const ProductCard = ({
   return (
     <div
       onClick={handleCardClick}
-      className="relative bg-white rounded-2xl p-4 border border-pink-100/60 hover:border-[#985991]/50 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group cursor-pointer"
+      className="relative bg-white rounded-2xl p-3 sm:p-4 border border-pink-100/60 hover:border-[#985991]/50 hover:shadow-2xl hover:-translate-y-1 sm:hover:-translate-y-2 transition-all duration-300 group cursor-pointer"
     >
       {badge && (
         <div className="absolute z-10 top-4 left-4">
@@ -60,7 +60,7 @@ const ProductCard = ({
       )}
 
       {/* Image Container */}
-      <div className="aspect-[4/5] flex items-center justify-center mb-4 relative bg-gray-50 rounded-2xl overflow-hidden">
+      <div className="aspect-[4/5] flex items-center justify-center mb-3 sm:mb-4 relative bg-gray-50 rounded-2xl overflow-hidden">
         <img
           src={image}
           alt={name}
@@ -80,7 +80,7 @@ const ProductCard = ({
         </button>
       </div>
 
-      <h3 className="font-serif text-base md:text-lg text-gray-900 leading-tight line-clamp-2">
+      <h3 className="font-serif text-sm sm:text-base md:text-lg text-gray-900 leading-tight line-clamp-2">
         {name}
       </h3>
 
@@ -91,7 +91,7 @@ const ProductCard = ({
       )}
 
       {/* Rating row */}
-      <div className="flex items-center gap-1 mb-2 text-xs text-gray-500">
+      <div className="flex items-center gap-1 mb-2 text-[11px] sm:text-xs text-gray-500">
         <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
           <Star size={12} className="fill-amber-400 text-amber-400" />
           <span className="font-medium">{rating.toFixed(1)}</span>
@@ -99,13 +99,13 @@ const ProductCard = ({
         <span>({reviews}+)</span>
       </div>
 
-      <p className="text-[#985991] font-bold mb-4">{price}</p>
+      <p className="text-[#985991] font-bold mb-3 sm:mb-4 text-sm sm:text-base">{price}</p>
 
       <div className="flex items-center space-x-2">
         <button
           onClick={handleAddToCart}
           disabled={isAdding}
-          className={`flex-1 bg-[#2D2D2D] text-white py-2.5 rounded-full text-sm font-medium shadow-md transition-colors ${isAdding ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[#985991]'}`}
+          className={`flex-1 bg-[#2D2D2D] text-white py-2 rounded-full text-xs sm:text-sm font-medium shadow-md transition-colors ${isAdding ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[#985991]'}`}
         >
           Add to Bag
         </button>

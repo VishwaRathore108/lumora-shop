@@ -107,7 +107,7 @@ const Login = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-12 bg-white">
         <div className="w-full max-w-md">
           <div className="text-center mb-10">
-            <h1 className="text-3xl font-serif text-gray-900 mb-2">Welcome to Lumora</h1>
+            <h1 className="text-3xl font-serif text-gray-900 mb-2">Welcome to Youvana Professional</h1>
             <p className="text-gray-500 text-sm">
               Sign in with your mobile number and one-time password.
             </p>
