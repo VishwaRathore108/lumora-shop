@@ -11,7 +11,7 @@ import GlowEdit from './components/GlowEdit';
 import OffersSection from './components/OffersSection';
 import ProductGrid from './components/ProductGrid';
 import SkinQuiz from './components/SkinQuiz';
-import Testimonials from './components/Testimonials';
+// import Testimonials from './components/Testimonials';
 import Footer from './components/Footer';
 import StoreLocations from './components/StoreLocations';
 import BrandScroll from './components/BrandScroll';
@@ -75,7 +75,7 @@ const Home = () => {
       <OffersSection />
       <ProductGrid />
       <SkinQuiz />
-      <Testimonials />
+      {/* <Testimonials /> */}
       <StoreLocations />
       <BrandScroll />
       <Features />

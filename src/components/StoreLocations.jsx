@@ -7,6 +7,7 @@ const StoreLocations = () => {
       id: 1,
       name: "THE BEAUTY HUB - khatipura front of maharaja complex,11 12 laal gali, near novelty market, Indore, Madhya Pradesh 452001",
       address: "front of maharaja complex,11 12 laal gali, near novelty market, Indore, Madhya Pradesh 452001",
+      mapLink: "https://maps.app.goo.gl/ehon9FKDXtt8DUPh7?g_st=aw",
       phone: "+91 9039299946",
       hours: "10:30 AM - 10:00 PM",
       image: "https://images.unsplash.com/photo-1522335789203-abd652327216?q=80&w=2670&auto=format&fit=crop" // Replace with actual shop photo
@@ -90,7 +91,7 @@ const StoreLocations = () => {
 
                 <div className="mt-auto flex flex-col gap-2">
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.address)}`}
+                    href={loc.mapLink || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.address)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full py-2.5 rounded-full bg-white text-[#985991] text-sm font-semibold hover:bg-pink-50 hover:text-[#7A4774] transition-colors group-hover:shadow-[0_18px_45px_rgba(0,0,0,0.55)]"
