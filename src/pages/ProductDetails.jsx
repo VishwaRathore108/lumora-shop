@@ -44,6 +44,7 @@ const ProductDetails = () => {
   const [showZoomModal, setShowZoomModal] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0.5, y: 0.5 });
   const [pauseAutoSwipe, setPauseAutoSwipe] = useState(false);
+  const [zoomEnabled, setZoomEnabled] = useState(false);
 
   const pageRef = useRef(null);
   const imageRef = useRef(null);
@@ -97,6 +98,26 @@ const ProductDetails = () => {
     return () => ctx.revert();
   }, [product]);
 
+  // Enable hover zoom only on non-touch / larger viewports.
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 768px) and (hover: hover) and (pointer: fine)');
+    const apply = () => {
+      const enabled = media.matches;
+      setZoomEnabled(enabled);
+      if (!enabled) {
+        setShowZoomModal(false);
+        setPauseAutoSwipe(false);
+      }
+    };
+    apply();
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', apply);
+      return () => media.removeEventListener('change', apply);
+    }
+    media.addListener(apply);
+    return () => media.removeListener(apply);
+  }, []);
+
   // Auto-swipe images every 4 seconds; pause while user is hovering the image
   useEffect(() => {
     const list = product?.images;
@@ -118,14 +139,17 @@ const ProductDetails = () => {
 
   // Amazon-style hover zoom: show zoomed portion in a modal; pause auto-swipe while hovering
   const handleImageMouseEnter = () => {
+    if (!zoomEnabled) return;
     setShowZoomModal(true);
     setPauseAutoSwipe(true);
   };
   const handleImageMouseLeave = () => {
+    if (!zoomEnabled) return;
     setShowZoomModal(false);
     setPauseAutoSwipe(false);
   };
   const handleImageMouseMove = (e) => {
+    if (!zoomEnabled) return;
     const el = imageContainerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -267,7 +291,7 @@ const ProductDetails = () => {
                   </div>
                 )}
                 {/* Hover zoom lens (follows cursor – visible at all sizes when zoom is active) */}
-                {showZoomModal && (
+                {zoomEnabled && showZoomModal && (
                   <div
                     className="absolute w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full border-2 border-[#985991] shadow-xl bg-white/30 pointer-events-none z-20 block"
                     style={{
@@ -282,16 +306,24 @@ const ProductDetails = () => {
                   <>
                     <button
                       type="button"
-                      onClick={() => setActiveImg((prev) => (prev - 1 + images.length) % images.length)}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 z-50 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:text-[#985991] transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveImg((prev) => (prev - 1 + images.length) % images.length);
+                      }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-[60] w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:text-[#985991] transition-colors"
                       aria-label="Previous image"
                     >
                       <ChevronLeft size={22} />
                     </button>
                     <button
                       type="button"
-                      onClick={() => setActiveImg((prev) => (prev + 1) % images.length)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:text-[#985991] transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setActiveImg((prev) => (prev + 1) % images.length);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-[60] w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:text-[#985991] transition-colors"
                       aria-label="Next image"
                     >
                       <ChevronRight size={22} />
@@ -300,7 +332,7 @@ const ProductDetails = () => {
                 )}
               </div>
               {/* Zoom preview box – shows exact area under cursor; high z-index so it stays on top of product info */}
-              {showZoomModal && (
+              {zoomEnabled && showZoomModal && (
                 <div
                   className="absolute z-[100] rounded-2xl border-2 border-gray-200 shadow-2xl bg-white shrink-0
                     w-[220px] h-[260px] sm:w-[260px] sm:h-[300px] md:w-[280px] md:h-[340px] lg:w-[320px] lg:h-[380px]
