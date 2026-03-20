@@ -249,15 +249,15 @@ const ProductDetails = () => {
   ];
 
   return (
-    <div ref={pageRef} className="bg-white">
+    <div ref={pageRef} className="bg-white overflow-x-hidden">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 pb-10" style={{ paddingTop: 'var(--navbar-height, 200px)' }}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <div className="max-w-7xl mx-auto px-4 pb-10 pt-[calc(var(--navbar-height,200px)+2.25rem)] md:pt-[calc(var(--navbar-height,200px)+0.5rem)]">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Left: Image gallery – thumbnails on left, fixed-size main image with prev/next (higher z so zoom preview stays on top) */}
-          <div className="product-animate flex flex-col lg:flex-row gap-3 relative z-20">
-            {/* Thumbnails: horizontal row on mobile (below main), vertical column on desktop (left of main) */}
-            <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto lg:max-h-[520px] py-1 order-2 lg:order-1 flex-shrink-0 lg:flex-shrink-0">
+          <div className="product-animate w-full min-w-0 flex flex-col lg:flex-row gap-3 relative z-20">
+            {/* Thumbnails: horizontal row on mobile (above main), vertical column on desktop (left of main) */}
+            <div className="flex w-full lg:w-auto flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-y-auto lg:max-h-[520px] py-1 order-1 lg:order-1 mb-3 lg:mb-0 flex-shrink-0">
               {images.map((img, idx) => (
                 <button
                   key={idx}
@@ -271,10 +271,10 @@ const ProductDetails = () => {
               ))}
             </div>
             {/* Main image (fixed size) + prev/next + hover zoom */}
-            <div className="relative flex-1 min-w-0 order-1 lg:order-2">
+            <div className="relative w-full lg:w-auto flex-1 min-w-0 order-2 lg:order-2">
               <div
                 ref={imageContainerRef}
-                className="relative w-full h-[380px] sm:h-[420px] lg:h-[520px] bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 flex-shrink-0 group cursor-crosshair"
+                className="relative w-full max-w-full h-[70vw] min-h-[260px] max-h-[420px] sm:h-[420px] lg:h-[520px] lg:max-h-none bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 flex items-center justify-center mx-auto flex-shrink-0 group cursor-crosshair"
                 onMouseEnter={handleImageMouseEnter}
                 onMouseLeave={handleImageMouseLeave}
                 onMouseMove={handleImageMouseMove}
@@ -283,7 +283,7 @@ const ProductDetails = () => {
                   ref={imageRef}
                   src={images[activeImg]}
                   alt={product.name}
-                  className="w-full h-full object-cover pointer-events-none"
+                  className="w-full max-w-full h-auto max-h-full object-contain pointer-events-none"
                 />
                 {hasDiscount && (
                   <div className="absolute top-4 left-4 bg-[#985991] text-white px-3 py-1 text-xs font-bold rounded-full z-10">
