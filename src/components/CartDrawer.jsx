@@ -1,17 +1,27 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useCart } from '../context/CartContext';
 import { X, Plus, Minus, Trash2, ShoppingBag, Truck, Store, ArrowRight } from 'lucide-react';
 import gsap from 'gsap';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const FREE_SHIPPING_THRESHOLD = 2000; // Set your amount
 
 const CartDrawer = () => {
-  const { isCartOpen, setIsCartOpen, cartItems, removeFromCart, updateQuantity, cartTotal } = useCart();
+  const { isCartOpen, closeCart, cartItems, removeFromCart, updateQuantity, cartTotal } = useCart();
   const drawerRef = useRef(null);
   const overlayRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const [deliveryMode, setDeliveryMode] = useState('delivery'); // 'delivery' or 'pickup'
+
+  const handleClose = useCallback(() => {
+    closeCart();
+  }, [closeCart]);
+
+  // Close drawer when route changes (avoids stuck open UI after navigation)
+  useEffect(() => {
+    closeCart();
+  }, [location.pathname, location.search, closeCart]);
 
   // Calculate progress for free shipping
   const progress = Math.min((cartTotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
@@ -54,7 +64,7 @@ const CartDrawer = () => {
     // Escape key to close drawer
     const handleKeyDown = (event) => {
       if (event.key === 'Escape' && isCartOpen) {
-        setIsCartOpen(false);
+        closeCart();
       }
     };
 
@@ -65,31 +75,45 @@ const CartDrawer = () => {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isCartOpen, setIsCartOpen]);
+  }, [isCartOpen, closeCart]);
 
   return (
     // Portal-like structure: Fixed container that sits on top of everything
     // z-[9999] ensures it is above navbar and footer
-    <div className={`fixed inset-0 z-[9999] pointer-events-none ${isCartOpen ? 'pointer-events-auto' : ''}`}>
+    <div className={`fixed inset-0 z-[10050] pointer-events-none ${isCartOpen ? 'pointer-events-auto' : ''}`}>
 
-      {/* Overlay Backdrop */}
+      {/* Overlay Backdrop — below drawer so clicks on panel win; z-index explicit for mobile stacking */}
       <div
         ref={overlayRef}
-        onClick={() => setIsCartOpen(false)}
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm opacity-0 hidden"
+        role="presentation"
+        onClick={handleClose}
+        className="absolute inset-0 z-10 bg-black/40 backdrop-blur-sm opacity-0 hidden"
       />
 
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className="absolute top-0 right-0 h-full w-full max-w-[450px] bg-white shadow-2xl flex flex-col translate-x-full"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Shopping bag"
+        onClick={(e) => e.stopPropagation()}
+        className="absolute top-0 right-0 z-20 h-full w-full max-w-[450px] bg-white shadow-2xl flex flex-col translate-x-full pointer-events-auto"
       >
         {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white shrink-0 relative z-30">
           <h2 className="font-serif text-xl text-gray-900 flex items-center gap-2">
             Your Bag <span className="text-sm font-sans text-gray-500 font-normal">({cartItems.length} items)</span>
           </h2>
-          <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleClose();
+            }}
+            className="relative z-40 p-2 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Close shopping bag"
+          >
             <X size={20} className="text-gray-500" />
           </button>
         </div>
@@ -120,7 +144,13 @@ const CartDrawer = () => {
               <ShoppingBag size={48} className="opacity-20" />
               <p>Your bag is empty.</p>
               <button
-                onClick={() => { setIsCartOpen(false); navigate('/shop'); }}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleClose();
+                  navigate('/shop');
+                }}
                 className="px-6 py-2 bg-gray-900 text-white rounded-full text-sm font-medium"
               >
                 Start Shopping

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState, useCallback } from 'react';
 
 const CartContext = createContext(null);
 
@@ -63,9 +63,12 @@ export const CartProvider = ({ children }) => {
     [cartItems]
   );
 
+  const closeCart = useCallback(() => setIsCartOpen(false), []);
+
   const value = {
     isCartOpen,
     setIsCartOpen,
+    closeCart,
     cartItems,
     addToCart,
     removeFromCart,
