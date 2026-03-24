@@ -126,3 +126,23 @@ export async function updateProductDiscount(id, payload) {
   const res = await api.patch(`/admin/products/${id}/discount`, payload);
   return res.data;
 }
+
+// ——— Deals ———
+
+/** GET /api/deals/active */
+export async function getActiveDeal() {
+  const res = await api.get('/deals/active');
+  return res.data;
+}
+
+/** POST /api/deals */
+export async function createDeal(payload) {
+  const res = await api.post('/deals', payload);
+  return res.data;
+}
+
+/** PUT /api/deals/:id */
+export async function updateDeal(id, payload) {
+  const res = await api.put(`/deals/${id}`, payload);
+  return res.data;
+}

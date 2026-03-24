@@ -10,6 +10,7 @@ import {
   X,
   Tag,
   TicketPercent,
+  Clock3,
   Truck,
   CreditCard,
   FileText,
@@ -41,6 +42,7 @@ const AdminSidebar = ({ isOpen, closeSidebar }) => {
         { id: 'orders', label: "Orders", icon: ShoppingBag },
         { id: 'categories', label: "Categories", icon: Tag },
         { id: 'coupons', label: "Coupons & Offers", icon: TicketPercent },
+        { id: 'deals', label: "Manage Deals", icon: Clock3 },
         { id: 'shipping', label: "Shipping", icon: Truck },
       ]
     },

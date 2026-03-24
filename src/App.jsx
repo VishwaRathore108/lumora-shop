@@ -44,6 +44,7 @@ import Reports from './AdminDashboard/Reports';
 import Notifications from './AdminDashboard/Notifications';
 import Security from './AdminDashboard/Security';
 import Admins from './AdminDashboard/Admins';
+import ManageDeals from './AdminDashboard/ManageDeals';
 
 
 //  User Dashboard (layout + nested pages)
@@ -134,6 +135,7 @@ function App() {
               <Route path='add-categories' element={<AddCategories />} />
             </Route>
             <Route path="coupons" element={<Coupons />} />
+            <Route path="deals" element={<ManageDeals />} />
             <Route path="shipping" element={<Shipping />} />
             <Route path="payments" element={<Payments />} />
             <Route path="reports" element={<Reports />} />

@@ -2,7 +2,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { Sparkles, Tag, Clock } from 'lucide-react';
+import { Tag, Clock } from 'lucide-react';
+import { getActivePromoDeal } from '../services/productService';
 
 import serumIcon from '../assets/serum.jpg';
 import moistIcon from '../assets/moisture.jpg';
@@ -12,41 +13,6 @@ import heroVideo from '../assets/video/video2.mp4';
 
 const BRAND = '#985991';
 
-const DEAL_PRODUCTS = [
-  {
-    name: 'Radiance 24H Glow Serum',
-    subtitle: 'Vitamin C + Niacinamide',
-    price: 1299,
-    originalPrice: 2199,
-    discountLabel: '40% OFF',
-    image: serumIcon,
-  },
-  {
-    name: 'HydraGlow Moisturizer',
-    subtitle: 'Hyaluronic Acid + Aloe',
-    price: 899,
-    originalPrice: 1499,
-    discountLabel: '40% OFF',
-    image: moistIcon,
-  },
-  {
-    name: 'Velvet Glow Lip Balm',
-    subtitle: 'Vitamin E + Shea Butter',
-    price: 499,
-    originalPrice: 799,
-    discountLabel: '38% OFF',
-    image: lipIcon,
-  },
-  {
-    name: 'Ultra Sunscreen Gel SPF 30',
-    subtitle: 'Broad Spectrum Protection',
-    price: 649,
-    originalPrice: 999,
-    discountLabel: '35% OFF',
-    image: sunIcon,
-  },
-];
-
 const Hero = () => {
   const navigate = useNavigate();
   const sectionRef = useRef(null);
@@ -55,9 +21,8 @@ const Hero = () => {
   const float1Ref = useRef(null);
   const float2Ref = useRef(null);
   const float3Ref = useRef(null);
-  const dealSlidesRef = useRef(null);
-
-  const [slideIndex, setSlideIndex] = useState(0);
+  const [activeDeal, setActiveDeal] = useState(null);
+  const [dealExpired, setDealExpired] = useState(false);
 
   const quickProducts = [
     { name: 'Sunscreen Gel', subtitle: 'SPF 30', image: sunIcon },
@@ -66,43 +31,62 @@ const Hero = () => {
     { name: 'Velvet Glow', subtitle: 'Lip', image: lipIcon },
   ];
 
-  // Deal‑of‑the‑hour countdown (60 minutes from page load)
-  const dealEndRef = useRef(Date.now() + 60 * 60 * 1000);
   const [timeLeft, setTimeLeft] = useState({ h: 0, m: 0, s: 0 });
+  const [showDealCard, setShowDealCard] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
+    const fetchDeal = async () => {
+      try {
+        const res = await getActivePromoDeal();
+        if (!mounted) return;
+        if (res?.success && res.deal?.product) {
+          setActiveDeal(res.deal);
+          setDealExpired(false);
+          setShowDealCard(true);
+        } else {
+          setActiveDeal(null);
+          setShowDealCard(false);
+        }
+      } catch {
+        if (!mounted) return;
+        setActiveDeal(null);
+        setShowDealCard(false);
+      }
+    };
+
+    fetchDeal();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeDeal?.dealEndTime) return undefined;
+
+    const endTime = new Date(activeDeal.dealEndTime).getTime();
+    if (Number.isNaN(endTime)) {
+      setDealExpired(true);
+      return undefined;
+    }
+
     const updateTime = () => {
-      const diff = Math.max(0, dealEndRef.current - Date.now());
+      const diff = Math.max(0, endTime - Date.now());
       const h = Math.floor(diff / (1000 * 60 * 60));
       const m = Math.floor((diff / (1000 * 60)) % 60);
       const s = Math.floor((diff / 1000) % 60);
       setTimeLeft({ h, m, s });
+      if (diff <= 0) {
+        setDealExpired(true);
+        setShowDealCard(false);
+      }
     };
 
     updateTime();
     const id = setInterval(updateTime, 1000);
     return () => clearInterval(id);
-  }, []);
-
-  // Deal carousel: auto-advance every 5 seconds
-  useEffect(() => {
-    const id = setInterval(() => {
-      setSlideIndex((i) => (i + 1) % DEAL_PRODUCTS.length);
-    }, 5000);
-    return () => clearInterval(id);
-  }, []);
-
-  // Deal carousel: slide animation
-  useEffect(() => {
-    const container = dealSlidesRef.current;
-    if (!container) return;
-    const offset = (slideIndex * 100) / DEAL_PRODUCTS.length;
-    gsap.to(container, {
-      xPercent: -offset,
-      duration: 0.5,
-      ease: 'power3.inOut',
-    });
-  }, [slideIndex]);
+  }, [activeDeal]);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -207,83 +191,64 @@ const Hero = () => {
           </div>
 
           {/* Right: Deal of the Hour card */}
-          <div className="relative flex justify-center mt-6 lg:mt-0">
-            <div className="w-full max-w-sm bg-black/45 border border-white/15 rounded-3xl px-4 sm:px-5 py-5 sm:py-6 backdrop-blur-md shadow-[0_24px_60px_rgba(0,0,0,0.55)]">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-semibold tracking-[0.25em] uppercase text-[#DCC9DA]">
-                  Deal of the Hour
-                </p>
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/80">
-                  <Clock size={12} />
-                  {`${String(timeLeft.h).padStart(2, '0')}:${String(timeLeft.m).padStart(2, '0')}:${String(timeLeft.s).padStart(2, '0')}`}
-                </span>
-              </div>
-
-              <div className="relative rounded-2xl overflow-hidden">
-                <div
-                  ref={dealSlidesRef}
-                  className="flex overflow-visible"
-                  style={{ width: `${DEAL_PRODUCTS.length * 100}%` }}
-                >
-                  {DEAL_PRODUCTS.map((deal) => (
-                    <div
-                      key={deal.name}
-                      className="w-full flex-shrink-0 px-0.5"
-                      style={{ width: `${100 / DEAL_PRODUCTS.length}%` }}
-                    >
-                      <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-[#6B3D66] via-[#985991] to-[#A86BA1] p-4 text-white">
-                        <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
-                          <div className="w-24 h-24 sm:w-20 sm:h-24 rounded-xl overflow-hidden bg-white/10 border border-white/20 flex-shrink-0 shadow-md">
-                            <img src={deal.image} alt={deal.name} className="w-full h-full object-cover" />
-                          </div>
-                          <div className="flex-1 space-y-1 min-w-0 text-center sm:text-left">
-                            <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-white/70">
-                              <Tag size={12} />
-                              Limited Time
-                            </span>
-                            <h2 className="text-sm md:text-base font-serif font-semibold leading-snug">
-                              {deal.name}
-                            </h2>
-                            <p className="text-[11px] text-white/70 truncate">{deal.subtitle}</p>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <span className="text-lg font-semibold">₹{deal.price}</span>
-                              <span className="text-xs line-through text-white/60">₹{deal.originalPrice}</span>
-                              <span className="px-2 py-0.5 text-[10px] rounded-full bg-amber-300/90 text-[#6B3D66] font-semibold">
-                                {deal.discountLabel}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => navigate('/shop')}
-                          className="mt-4 w-full rounded-full bg-white text-[#985991] text-xs font-semibold py-2 hover:bg-pink-50 transition-colors"
-                        >
-                          Grab Now
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+          {showDealCard && activeDeal?.product ? (
+            <div className="relative flex justify-center mt-6 lg:mt-0">
+              <div className="w-full max-w-sm bg-black/45 border border-white/15 rounded-3xl px-4 sm:px-5 py-5 sm:py-6 backdrop-blur-md shadow-[0_24px_60px_rgba(0,0,0,0.55)]">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[11px] font-semibold tracking-[0.25em] uppercase text-[#DCC9DA]">
+                    Deal of the Hour
+                  </p>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/80">
+                    <Clock size={12} />
+                    {dealExpired
+                      ? 'Deal Expired'
+                      : `${String(timeLeft.h).padStart(2, '0')}:${String(timeLeft.m).padStart(2, '0')}:${String(timeLeft.s).padStart(2, '0')}`}
+                  </span>
                 </div>
 
-                {/* Carousel dots */}
-                <div className="flex justify-center gap-1.5 mt-3">
-                  {DEAL_PRODUCTS.map((_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => setSlideIndex(i)}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        i === slideIndex ? 'bg-[#DCC9DA] w-4' : 'bg-white/40 hover:bg-white/60'
-                      }`}
-                      aria-label={`View deal ${i + 1}`}
-                    />
-                  ))}
+                <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-[#6B3D66] via-[#985991] to-[#A86BA1] p-4 text-white">
+                  <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
+                    <div className="w-24 h-24 sm:w-20 sm:h-24 rounded-xl overflow-hidden bg-white/10 border border-white/20 flex-shrink-0 shadow-md">
+                      <img
+                        src={activeDeal.product.image || sunIcon}
+                        alt={activeDeal.product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1 min-w-0 text-center sm:text-left">
+                      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-white/70">
+                        <Tag size={12} />
+                        Limited Time
+                      </span>
+                      <h2 className="text-sm md:text-base font-serif font-semibold leading-snug">
+                        {activeDeal.product.name}
+                      </h2>
+                      <p className="text-[11px] text-white/70 truncate">
+                        {activeDeal.product.subtitle || 'Special limited-time offer'}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-lg font-semibold">₹{activeDeal.product.price}</span>
+                        <span className="text-xs line-through text-white/60">₹{activeDeal.product.originalPrice}</span>
+                        {activeDeal.product.discountPercent > 0 && (
+                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-amber-300/90 text-[#6B3D66] font-semibold">
+                            {activeDeal.product.discountPercent}% OFF
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/product-details/${activeDeal.product._id}`)}
+                    className="mt-4 w-full rounded-full bg-white text-[#985991] text-xs font-semibold py-2 hover:bg-pink-50 transition-colors"
+                  >
+                    Grab Now
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
         {/* Quick product chips under hero */}

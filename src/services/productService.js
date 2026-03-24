@@ -55,3 +55,12 @@ export async function getStorefrontFilterOptions(params = {}) {
   return res.data;
 }
 
+/**
+ * Active promo deal for storefront hero
+ * GET /api/deals/active
+ */
+export async function getActivePromoDeal() {
+  const res = await api.get('/deals/active');
+  return res.data;
+}
+
