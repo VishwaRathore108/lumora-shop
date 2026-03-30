@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 
 // Import Pages & Components
 import Loader from './components/Loader';
@@ -19,6 +20,10 @@ import Features from './components/Features';
 import CartDrawer from './components/CartDrawer';
 import FixedActions from './components/FixedActions';
 import ProtectedRoute from './components/ProtectedRoute';
+import api from './services/apiClient';
+import { replaceCartItems, selectCartItems } from './features/cart/cartSlice';
+import { selectToken, selectUser } from './features/auth/authSlice';
+import { fetchWishlist } from './features/wishlist/wishlistSlice';
 
 // Pages
 import Login from './pages/Login';
@@ -28,6 +33,7 @@ import Contact from './pages/Contact';
 import TrackOrder from './pages/TrackOrder';
 import ProductDetails from './pages/ProductDetails';
 import CartPage from './pages/CartPage';
+import Checkout from './pages/Checkout';
 // Admin (layout + nested pages)
 import AdminDashboard from './AdminDashboard/AdminDashboard';
 import DashboardHome from './AdminDashboard/DashboardHome';
@@ -45,6 +51,7 @@ import Notifications from './AdminDashboard/Notifications';
 import Security from './AdminDashboard/Security';
 import Admins from './AdminDashboard/Admins';
 import ManageDeals from './AdminDashboard/ManageDeals';
+import AdminLiveCarts from './AdminDashboard/AdminLiveCarts';
 
 
 //  User Dashboard (layout + nested pages)
@@ -57,6 +64,8 @@ import UserPayments from './UserDashboard/UserPayments';
 import MyReviews from './UserDashboard/MyReviews';
 import UserProfile from './UserDashboard/UserProfile';
 import ViewOrderDetails from './UserDashboard/ViewOrderDetails';
+import DashboardCart from './UserDashboard/DashboardCart';
+import DashboardBilling from './UserDashboard/DashboardBilling';
 import CategoriesLayout from './AdminDashboard/CategoriesLayout';
 import AddCategories from './AdminDashboard/AddCategories';
 import ProductsLayout from './AdminDashboard/ProductsLayout';
@@ -99,7 +108,65 @@ const ScrollToTop = () => {
 };
 
 function App() {
+  const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
+  const [cartHydrated, setCartHydrated] = useState(false);
+  const cartItems = useSelector(selectCartItems);
+  const token = useSelector(selectToken);
+  const user = useSelector(selectUser);
+
+  useEffect(() => {
+    if (!token || !user || user.role !== 'user') {
+      setCartHydrated(false);
+      return;
+    }
+
+    let cancelled = false;
+    const hydrateCartFromBackend = async () => {
+      try {
+        const response = await api.get('/cart');
+        const serverItems = Array.isArray(response.data?.cart?.items) ? response.data.cart.items : [];
+        const mappedItems = serverItems.map((item) => ({
+          id: item.product?._id || item.product || item.id,
+          name: item.product?.name || item.prodName || '',
+          image: item.product?.images?.[0] || item.img || '',
+          price: Number(item.price || 0),
+          quantity: Number(item.qty || item.quantity || 1),
+          selectedShade: item.selectedShade?.name ? { name: item.selectedShade.name, hex: item.selectedShade.hex } : undefined,
+        }));
+        if (!cancelled) {
+          dispatch(replaceCartItems(mappedItems));
+          setCartHydrated(true);
+        }
+      } catch (error) {
+        console.error('Cart hydrate failed:', error);
+        if (!cancelled) setCartHydrated(true);
+      }
+    };
+    hydrateCartFromBackend();
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, token, user]);
+
+  useEffect(() => {
+    if (!token || !user || user.role !== 'user' || !cartHydrated) return;
+
+    const timer = window.setTimeout(async () => {
+      try {
+        await api.post('/cart/sync', { items: cartItems });
+      } catch (error) {
+        console.error('Cart sync failed:', error);
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [cartHydrated, cartItems, token, user]);
+
+  useEffect(() => {
+    if (!token || !user || user.role !== 'user') return;
+    dispatch(fetchWishlist());
+  }, [dispatch, token, user]);
 
   return (
     <>
@@ -113,6 +180,7 @@ function App() {
           <Route path="/story" element={<Story />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<Checkout />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/track-order" element={<TrackOrder />} />
           <Route path="/product-details/:id" element={<ProductDetails />} />
@@ -128,6 +196,7 @@ function App() {
             </Route>
             <Route path="orders" element={<Orders />} />
             <Route path="customers" element={<Customers />} />
+            <Route path="live-carts" element={<AdminLiveCarts />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />
             <Route path="categories" element={<CategoriesLayout />} >
@@ -150,8 +219,10 @@ function App() {
             <Route path="overview" element={<UserOverview />} />
             <Route path="orders" element={<MyOrders />} />
             <Route path="orders/:orderId" element={<ViewOrderDetails />} />
+            <Route path="cart" element={<DashboardCart />} />
             <Route path="wishlist" element={<Wishlist />} />
             <Route path="addresses" element={<Addresses />} />
+            <Route path="billing-invoices" element={<DashboardBilling />} />
             <Route path="payments" element={<UserPayments />} />
             <Route path="reviews" element={<MyReviews />} />
             <Route path="profile" element={<UserProfile />} />

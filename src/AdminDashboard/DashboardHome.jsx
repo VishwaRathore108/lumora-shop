@@ -19,6 +19,7 @@ import {
   ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
+import AdminWishlistInsights from './AdminWishlistInsights';
 
 const DashboardHome = () => {
   
@@ -199,6 +200,8 @@ const DashboardHome = () => {
         </div>
 
       </div>
+
+      <AdminWishlistInsights />
     </div>
   );
 };

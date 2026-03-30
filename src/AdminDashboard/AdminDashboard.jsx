@@ -24,7 +24,7 @@ const AdminDashboard = () => {
 
   const formatTitle = (slug) =>
     slug
-      .replace('-', ' ')
+      .replace(/-/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
 
   return (

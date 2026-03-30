@@ -3,9 +3,11 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useCart } from '../context/CartContext';
 import { Trash2, Plus, Minus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const CartPage = () => {
     const { cartItems, cartTotal, updateQuantity, removeFromCart } = useCart();
+    const navigate = useNavigate();
 
     const handleDecrease = (item) => {
         updateQuantity(item.id, item.selectedShade?.name, item.quantity - 1);
@@ -134,6 +136,7 @@ const CartPage = () => {
                                 type="button"
                                 className="w-full bg-[#985991] text-white py-3 rounded-lg text-sm font-semibold hover:bg-[#7A4774] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                 disabled={cartItems.length === 0}
+                                onClick={() => navigate('/checkout')}
                             >
                                 Proceed to Checkout
                             </button>

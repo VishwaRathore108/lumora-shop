@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { SlidersHorizontal, X, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 
 const formatPrice = (n) =>
@@ -75,9 +75,9 @@ const ShopFilters = ({
   const [showAllBrands, setShowAllBrands] = useState(false);
 
   const brands = filterOptions?.brands || [];
-  const categories = filterOptions?.categories || [];
+  const categoriesFromApi = filterOptions?.categories || [];
   const subcategories = filterOptions?.subcategories || [];
-  const productTypes = filterOptions?.productTypes || [];
+  const productTypesFromApi = filterOptions?.productTypes || [];
   const variants = filterOptions?.variants || [];
   const minPriceRange = filterOptions?.minPrice ?? 0;
   const maxPriceRange = filterOptions?.maxPrice ?? 0;
@@ -98,18 +98,46 @@ const ShopFilters = ({
     : brands;
   const displayBrands = showAllBrands ? filteredBrands : filteredBrands.slice(0, 10);
 
+  // Ensure Haircare is available as a primary CATEGORY option.
+  const categories = useMemo(() => {
+    const list = Array.isArray(categoriesFromApi) ? [...categoriesFromApi] : [];
+    const hasHaircare = list.some((c) =>
+      ['hair', 'haircare'].includes(String(c?.slug || '').toLowerCase()) ||
+      String(c?.name || '').toLowerCase() === 'haircare'
+    );
+    if (!hasHaircare) {
+      list.push({ id: '__haircare_fallback__', slug: 'haircare', name: 'Haircare' });
+    }
+    return list;
+  }, [categoriesFromApi]);
+
+  // If Haircare is treated as top-level category, hide it from PRODUCT TYPE.
+  const productTypes = useMemo(
+    () =>
+      (Array.isArray(productTypesFromApi) ? productTypesFromApi : []).filter(
+        (t) => String(t?.value || '').toLowerCase() !== 'haircare'
+      ),
+    [productTypesFromApi]
+  );
+
   const handleApplyPrice = () => {
     const min = localMin === '' ? undefined : parseFloat(localMin);
     const max = localMax === '' ? undefined : parseFloat(localMax);
     onApply({ minPrice: min, maxPrice: max });
   };
 
+  const closeMobileDrawer = (delay = 0) => {
+    setTimeout(() => setMobileOpen(false), delay);
+  };
+
   const handleCategoryClick = (slug) => {
     onApply({ category: selectedCategory === slug ? undefined : slug, subcategory: undefined });
+    if (mobileOpen) closeMobileDrawer(300);
   };
 
   const handleSubcategoryClick = (slug) => {
     onApply({ subcategory: selectedSubcategory === slug ? undefined : slug });
+    if (mobileOpen) closeMobileDrawer(300);
   };
 
   const handleBrandToggle = (b) => {
@@ -243,9 +271,7 @@ const ShopFilters = ({
         </ul>
       </FilterSection>
 
-      <FilterSection id="price" title="
-      
-      nge" visible openSections={openSections} onToggle={toggleSection}>
+      <FilterSection id="price" title="Price Range" visible openSections={openSections} onToggle={toggleSection}>
         <div className="space-y-3">
           <div className="flex gap-2 items-center">
             <input
@@ -430,6 +456,15 @@ const ShopFilters = ({
               ) : (
                 filterContent
               )}
+            </div>
+            <div className="p-4 border-t border-gray-100 bg-white">
+              <button
+                type="button"
+                onClick={() => closeMobileDrawer(150)}
+                className="w-full bg-[#985991] text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-[#7A4774] transition-colors"
+              >
+                Apply Filters
+              </button>
             </div>
           </div>
         </>

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
-import { Heart, Star } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Check, Heart, Minus, Plus, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useDispatch, useSelector } from 'react-redux';
+import { selectToken, selectUser } from '../features/auth/authSlice';
+import { selectWishlistProductIds, toggleWishlist } from '../features/wishlist/wishlistSlice';
 
 const ProductCard = ({
   id,
@@ -14,9 +17,18 @@ const ProductCard = ({
   reviews = 128,
 }) => {
   const navigate = useNavigate();
-  const { addToCart } = useCart();
-  const [wishlisted, setWishlisted] = useState(false);
+  const dispatch = useDispatch();
+  const { addToCart, cartItems, updateQuantity, removeFromCart } = useCart();
   const [isAdding, setIsAdding] = useState(false);
+  const wishlistProductIds = useSelector(selectWishlistProductIds);
+  const token = useSelector(selectToken);
+  const user = useSelector(selectUser);
+  const isWishlisted = wishlistProductIds.includes(String(id));
+  const cartItem = useMemo(
+    () => cartItems.find((item) => item.id === id && !item.selectedShade?.name),
+    [cartItems, id]
+  );
+  const quantityInCart = cartItem?.quantity || 0;
 
   const handleCardClick = () => {
     if (!id) return;
@@ -41,9 +53,35 @@ const ProductCard = ({
     setTimeout(() => setIsAdding(false), 400);
   };
 
-  const toggleWishlist = (e) => {
+  const handleDecreaseQuantity = (e) => {
     e.stopPropagation();
-    setWishlisted((prev) => !prev);
+    if (!cartItem) return;
+    const nextQty = (cartItem.quantity || 1) - 1;
+    if (nextQty <= 0) {
+      removeFromCart(cartItem.id);
+      return;
+    }
+    updateQuantity(cartItem.id, undefined, nextQty);
+  };
+
+  const handleIncreaseQuantity = (e) => {
+    e.stopPropagation();
+    if (!cartItem) {
+      handleAddToCart(e);
+      return;
+    }
+    updateQuantity(cartItem.id, undefined, (cartItem.quantity || 0) + 1);
+  };
+
+  const handleToggleWishlist = (e) => {
+    e.stopPropagation();
+    if (!token || !user) {
+      navigate('/login');
+      return;
+    }
+    const productId = String(id);
+    if (!/^[a-fA-F0-9]{24}$/.test(productId)) return;
+    dispatch(toggleWishlist({ productId }));
   };
 
   return (
@@ -70,12 +108,12 @@ const ProductCard = ({
 
         {/* Wishlist button on image */}
         <button
-          onClick={toggleWishlist}
+          onClick={handleToggleWishlist}
           className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 shadow-sm flex items-center justify-center hover:bg-[#FFF5F5] transition-colors"
         >
           <Heart
             size={18}
-            className={wishlisted ? 'text-pink-500 fill-pink-500' : 'text-gray-400'}
+            className={isWishlisted ? 'text-[#985991] fill-[#985991]' : 'text-gray-400'}
           />
         </button>
       </div>
@@ -102,13 +140,38 @@ const ProductCard = ({
       <p className="text-[#985991] font-bold mb-3 sm:mb-4 text-sm sm:text-base">{price}</p>
 
       <div className="flex items-center space-x-2">
-        <button
-          onClick={handleAddToCart}
-          disabled={isAdding}
-          className={`flex-1 bg-[#2D2D2D] text-white py-2 rounded-full text-xs sm:text-sm font-medium shadow-md transition-colors ${isAdding ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[#985991]'}`}
-        >
-          Add to Bag
-        </button>
+        {quantityInCart > 0 ? (
+          <div className="flex-1 flex items-center justify-between bg-[#985991] text-white py-1.5 px-2 rounded-full text-xs sm:text-sm font-medium shadow-md">
+            <button
+              type="button"
+              onClick={handleDecreaseQuantity}
+              className="h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
+              aria-label="Decrease quantity"
+            >
+              <Minus size={14} />
+            </button>
+            <div className="flex items-center gap-2">
+              <Check size={14} />
+              <span>Added ({quantityInCart})</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleIncreaseQuantity}
+              className="h-8 w-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
+              aria-label="Increase quantity"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleAddToCart}
+            disabled={isAdding}
+            className={`flex-1 bg-[#2D2D2D] text-white py-2 rounded-full text-xs sm:text-sm font-medium shadow-md transition-colors ${isAdding ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[#985991]'}`}
+          >
+            {isAdding ? 'Adding...' : 'Add to Bag'}
+          </button>
+        )}
       </div>
     </div>
   );

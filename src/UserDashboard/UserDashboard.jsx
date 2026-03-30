@@ -9,7 +9,7 @@ const UserDashboard = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const user = useSelector(selectUser);
-  const displayName = user?.name && user.name.trim().length > 0 ? user.name : 'Beauty Lover';
+  const displayName = user?.name && user.name.trim().length > 0 ? user.name : 'vishwa';
 
   // Derive current section from URL for header title/search behavior
   const pathParts = location.pathname.split('/').filter(Boolean);
@@ -22,7 +22,7 @@ const UserDashboard = () => {
   const formatTitle = (slug) => {
     if (slug === 'profile') return 'Account Settings';
     if (!slug || slug === 'overview') return 'Overview';
-    return slug.replace('-', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   return (
@@ -49,7 +49,7 @@ const UserDashboard = () => {
             </button>
             <div>
               <p className="text-[11px] uppercase tracking-[0.25em] text-pink-400 hidden md:block">
-                Lumora Beauty Club
+                The Beauty Hub
               </p>
               <h2 className="text-xl font-semibold text-gray-900 capitalize">
                 {formatTitle(currentSection)}

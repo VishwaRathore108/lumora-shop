@@ -33,7 +33,14 @@ const Shop = () => {
     [brandParam]
   );
   const productTypes = useMemo(
-    () => (productTypeParam ? productTypeParam.split(',').map((t) => t.trim()).filter(Boolean) : []),
+    () =>
+      productTypeParam
+        ? productTypeParam
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean)
+            .filter((t) => t.toLowerCase() !== 'haircare')
+        : [],
     [productTypeParam]
   );
   const variants = useMemo(

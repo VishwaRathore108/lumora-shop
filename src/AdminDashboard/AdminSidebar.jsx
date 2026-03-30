@@ -17,6 +17,7 @@ import {
   Bell,
   Shield,
   UserCog,
+  Radar,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -50,6 +51,7 @@ const AdminSidebar = ({ isOpen, closeSidebar }) => {
       title: "USER MANAGEMENT",
       items: [
         { id: 'customers', label: "Customers", icon: Users },
+        { id: 'live-carts', label: "Live Carts", icon: Radar },
         { id: 'admins', label: "Admins", icon: UserCog },
       ]
     },

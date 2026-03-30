@@ -1,69 +1,38 @@
-import React, { createContext, useContext, useMemo, useState, useCallback } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  addToCart as addToCartAction,
+  closeCart as closeCartAction,
+  removeFromCart as removeFromCartAction,
+  selectCartItems,
+  selectCartOpen,
+  selectCartTotal,
+  setCartOpen as setCartOpenAction,
+  updateQuantity as updateQuantityAction,
+} from '../features/cart/cartSlice';
 
 const CartContext = createContext(null);
 
 export const CartProvider = ({ children }) => {
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [cartItems, setCartItems] = useState([]);
+  const dispatch = useDispatch();
+  const isCartOpen = useSelector(selectCartOpen);
+  const cartItems = useSelector(selectCartItems);
+  const cartTotal = useSelector(selectCartTotal);
 
   const addToCart = (item) => {
-    setIsCartOpen(true);
-    setCartItems((prev) => {
-      // Match on id + optional shade name
-      const shadeName = item.selectedShade?.name;
-      const index = prev.findIndex(
-        (p) => p.id === item.id && (shadeName ? p.selectedShade?.name === shadeName : true)
-      );
-
-      if (index === -1) {
-        return [...prev, { ...item, quantity: item.quantity || 1 }];
-      }
-
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        quantity: updated[index].quantity + (item.quantity || 1),
-      };
-      return updated;
-    });
+    dispatch(addToCartAction(item));
   };
 
   const removeFromCart = (id, shadeName) => {
-    setCartItems((prev) =>
-      prev.filter(
-        (item) =>
-          item.id !== id ||
-          (shadeName && item.selectedShade?.name !== shadeName)
-      )
-    );
+    dispatch(removeFromCartAction({ id, shadeName }));
   };
 
   const updateQuantity = (id, shadeName, quantity) => {
-    setCartItems((prev) =>
-      prev
-        .map((item) => {
-          if (
-            item.id === id &&
-            (shadeName ? item.selectedShade?.name === shadeName : true)
-          ) {
-            return { ...item, quantity };
-          }
-          return item;
-        })
-        .filter((item) => item.quantity > 0)
-    );
+    dispatch(updateQuantityAction({ id, shadeName, quantity }));
   };
 
-  const cartTotal = useMemo(
-    () =>
-      cartItems.reduce(
-        (sum, item) => sum + (Number(item.price) || 0) * (item.quantity || 1),
-        0
-      ),
-    [cartItems]
-  );
-
-  const closeCart = useCallback(() => setIsCartOpen(false), []);
+  const closeCart = useCallback(() => dispatch(closeCartAction()), [dispatch]);
+  const setIsCartOpen = useCallback((open) => dispatch(setCartOpenAction(open)), [dispatch]);
 
   const value = {
     isCartOpen,

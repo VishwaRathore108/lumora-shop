@@ -87,7 +87,7 @@ const CartDrawer = () => {
         ref={overlayRef}
         role="presentation"
         onClick={handleClose}
-        className="absolute inset-0 z-10 bg-black/40 backdrop-blur-sm opacity-0 hidden"
+        className="absolute inset-0 z-10 "
       />
 
       {/* Drawer */}
@@ -250,7 +250,14 @@ const CartDrawer = () => {
             </div>
 
             {/* Checkout Button */}
-            <button className="w-full bg-[#985991] text-white py-3.5 rounded-lg font-medium hover:bg-[#7A4774] transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-100 group">
+            <button
+              type="button"
+              onClick={() => {
+                closeCart();
+                navigate('/checkout');
+              }}
+              className="w-full bg-[#985991] text-white py-3.5 rounded-lg font-medium hover:bg-[#7A4774] transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-100 group"
+            >
               Proceed to Checkout
               <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
             </button>

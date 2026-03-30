@@ -2,12 +2,14 @@ import React from 'react';
 import {
   LayoutGrid,
   ShoppingBag,
+  ShoppingCart,
   Heart,
   MapPin,
   User,
   LogOut,
   Star,
   CreditCard,
+  ReceiptText,
   X,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
@@ -25,13 +27,22 @@ const UserSidebar = ({ isOpen, closeSidebar }) => {
     navigate('/login', { replace: true });
   };
 
-  const displayName = user?.name && user.name.trim().length > 0 ? user.name : 'Beauty Lover';
+  const displayName = user?.name && user.name.trim().length > 0 ? user.name.trim() : 'Beauty Enthusiast';
+  const profileImage = user?.profilePic || user?.profileImage || '';
+  const userInitials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'BE';
 
   const NAV_ITEMS = [
     { id: 'overview', label: "My Overview", icon: LayoutGrid },
     { id: 'orders', label: "My Orders", icon: ShoppingBag },
+    { id: 'cart', label: "My Cart", icon: ShoppingCart },
     { id: 'wishlist', label: "Wishlist", icon: Heart },
     { id: 'addresses', label: "Saved Addresses", icon: MapPin },
+    { id: 'billing-invoices', label: "Billing & Invoices", icon: ReceiptText },
     { id: 'payments', label: "Payment Methods", icon: CreditCard },
     { id: 'reviews', label: "My Reviews", icon: Star },
     { id: 'profile', label: "Account Settings", icon: User },
@@ -68,15 +79,26 @@ const UserSidebar = ({ isOpen, closeSidebar }) => {
 
         {/* 2. User Profile Snippet (Dynamic) */}
         <div className="px-6 mb-6">
-          <div className="bg-pink-50/50 p-4 rounded-2xl border border-pink-100 flex items-center gap-3">
-            <img
-              src={user?.profileImage || 'https://i.pravatar.cc/150?u=user'}
-              alt="User"
-              className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-            />
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Hello,</p>
-              <p className="text-sm font-bold text-gray-800 truncate max-w-[9rem]">{displayName}</p>
+          <div className="rounded-3xl border border-[#EEDFEA] bg-gradient-to-br from-[#FFF7FB] via-[#FEF8FB] to-[#F6ECF8] p-4 shadow-sm">
+            <div className="flex items-center gap-3.5">
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  alt={displayName}
+                  className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md shadow-[#D9BBD5]/40"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-[#985991] text-white flex items-center justify-center text-sm font-semibold tracking-wide shadow-md shadow-[#CFAFCC]/60">
+                  {userInitials}
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-[0.14em] text-[#A1789D] font-semibold">
+                  The Beauty Hub
+                </p>
+                <p className="text-base font-semibold text-gray-900 truncate max-w-[10rem]">{displayName}</p>
+                <p className="text-xs text-gray-500">Welcome back</p>
+              </div>
             </div>
           </div>
         </div>
