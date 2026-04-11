@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { ArrowRight, Phone, KeyRound } from 'lucide-react';
 import heroImg from '../assets/img1.jpg';
@@ -10,8 +10,10 @@ const sanitizeMobile = (value) => value.replace(/\D/g, '').slice(0, 15);
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const { error } = useSelector(selectAuth);
+  const redirectTo = location.state?.redirectTo || '/user';
 
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
@@ -75,9 +77,9 @@ const Login = () => {
       if (role === 'admin') {
         navigate('/admin', { replace: true });
       } else if (role === 'driver') {
-        navigate('/admin', { replace: true });
+        navigate('/driver', { replace: true });
       } else {
-        navigate('/user', { replace: true });
+        navigate(redirectTo, { replace: true });
       }
     } catch (err) {
       dispatch(authFailure('Verification failed. Please try again.'));

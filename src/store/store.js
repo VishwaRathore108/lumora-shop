@@ -4,6 +4,9 @@ import cartReducer from '../features/cart/cartSlice';
 import checkoutReducer from '../features/checkout/checkoutSlice';
 import wishlistReducer from '../features/wishlist/wishlistSlice';
 import orderReducer from '../features/orders/orderSlice';
+import userStatsReducer from '../features/userStats/userStatsSlice';
+import reviewsReducer from '../features/reviews/reviewSlice';
+import couponReducer from '../features/coupons/couponSlice';
 
 const store = configureStore({
   reducer: {
@@ -12,6 +15,9 @@ const store = configureStore({
     checkout: checkoutReducer,
     wishlist: wishlistReducer,
     orders: orderReducer,
+    userStats: userStatsReducer,
+    reviews: reviewsReducer,
+    coupons: couponReducer,
   },
 });
 

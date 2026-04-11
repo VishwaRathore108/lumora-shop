@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
   fetchAdminOrders,
   selectAdminOrders,
@@ -10,6 +11,7 @@ import {
 } from '../features/orders/orderSlice';
 
 const Orders = () => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const orders = useSelector(selectAdminOrders);
   const loading = useSelector(selectOrdersLoading);
@@ -46,6 +48,7 @@ const Orders = () => {
             { name: 'all', label: 'All' },
             { name: 'pending', label: 'Pending' },
             { name: 'confirmed', label: 'Confirmed' },
+            { name: 'assigned', label: 'Assigned' },
             { name: 'shipped', label: 'Shipped' },
             { name: 'delivered', label: 'Delivered' },
             { name: 'cancelled', label: 'Cancelled' },
@@ -94,6 +97,8 @@ const Orders = () => {
                 <th className="p-4 font-semibold">Date</th>
                 <th className="p-4 font-semibold">Amount</th>
                 <th className="p-4 font-semibold">Payment</th>
+                <th className="p-4 font-semibold">Driver</th>
+                <th className="p-4 font-semibold">Driver Response</th>
                 <th className="p-4 font-semibold">Order Status</th>
               </tr>
             </thead>
@@ -101,7 +106,15 @@ const Orders = () => {
               {filteredOrders.length > 0 ? (
                 filteredOrders.map((order) => (
                   <tr key={order._id} className="hover:bg-gray-50/80 transition-colors group">
-                    <td className="p-4 font-bold text-gray-800">#{order._id.slice(-8).toUpperCase()}</td>
+                    <td className="p-4 font-bold text-gray-800">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/orders/${order._id}`)}
+                        className="hover:text-[#985991]"
+                      >
+                        #{order._id.slice(-8).toUpperCase()}
+                      </button>
+                    </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <img src={order.user?.profileImage || 'https://i.pravatar.cc/150?u=user'} alt="" className="w-8 h-8 rounded-full bg-gray-200" />
@@ -120,6 +133,17 @@ const Orders = () => {
                          {String(order.paymentStatus || 'pending').toUpperCase()}
                        </span>
                     </td>
+                    <td className="p-4 text-xs text-gray-600">
+                      {order.delivery?.assignedDriver?.name || 'Unassigned'}
+                      <div className="text-[11px] text-gray-400 uppercase">
+                        {order.delivery?.assignmentStatus || 'unassigned'}
+                      </div>
+                    </td>
+                    <td className="p-4 text-xs text-red-600">
+                      {order.delivery?.rejectionReason
+                        ? `${order.delivery.rejectionReason}${order.delivery?.rejectionNote ? ` - ${order.delivery.rejectionNote}` : ''}`
+                        : '—'}
+                    </td>
                     <td className="p-4">
                       <select
                         value={order.orderStatus || order.status || 'pending'}
@@ -133,7 +157,7 @@ const Orders = () => {
                         }
                         className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white capitalize focus:outline-none focus:border-[#985991]"
                       >
-                        {['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'].map((st) => (
+                        {['pending', 'confirmed', 'assigned', 'shipped', 'delivered', 'cancelled'].map((st) => (
                           <option key={st} value={st}>
                             {st}
                           </option>
@@ -144,7 +168,7 @@ const Orders = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="p-10 text-center text-gray-400">
+                  <td colSpan="9" className="p-10 text-center text-gray-400">
                     No orders found.
                   </td>
                 </tr>

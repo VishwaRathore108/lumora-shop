@@ -29,8 +29,12 @@ const getDefaultAddressId = (addresses = []) =>
 
 export const fetchAddresses = createAsyncThunk(
   'checkout/fetchAddresses',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
     try {
+      const token = getState().auth?.token;
+      if (!token) {
+        return rejectWithValue('Please login to manage your addresses.');
+      }
       const response = await api.get('/user/addresses');
       return response.data?.addresses || [];
     } catch (error) {
@@ -41,8 +45,12 @@ export const fetchAddresses = createAsyncThunk(
 
 export const createAddress = createAsyncThunk(
   'checkout/createAddress',
-  async (payload, { rejectWithValue }) => {
+  async (payload, { rejectWithValue, getState }) => {
     try {
+      const token = getState().auth?.token;
+      if (!token) {
+        return rejectWithValue('Please login to manage your addresses.');
+      }
       const response = await api.post('/user/addresses', payload);
       return response.data?.addresses || [];
     } catch (error) {
@@ -53,8 +61,12 @@ export const createAddress = createAsyncThunk(
 
 export const updateAddress = createAsyncThunk(
   'checkout/updateAddress',
-  async ({ addressId, payload }, { rejectWithValue }) => {
+  async ({ addressId, payload }, { rejectWithValue, getState }) => {
     try {
+      const token = getState().auth?.token;
+      if (!token) {
+        return rejectWithValue('Please login to manage your addresses.');
+      }
       const response = await api.put(`/users/addresses/${addressId}`, payload);
       return response.data?.addresses || [];
     } catch (error) {
@@ -65,8 +77,12 @@ export const updateAddress = createAsyncThunk(
 
 export const deleteAddress = createAsyncThunk(
   'checkout/deleteAddress',
-  async (addressId, { rejectWithValue }) => {
+  async (addressId, { rejectWithValue, getState }) => {
     try {
+      const token = getState().auth?.token;
+      if (!token) {
+        return rejectWithValue('Please login to manage your addresses.');
+      }
       const response = await api.delete(`/user/addresses/${addressId}`);
       return response.data?.addresses || [];
     } catch (error) {
@@ -77,8 +93,12 @@ export const deleteAddress = createAsyncThunk(
 
 export const setDefaultAddress = createAsyncThunk(
   'checkout/setDefaultAddress',
-  async (addressId, { rejectWithValue }) => {
+  async (addressId, { rejectWithValue, getState }) => {
     try {
+      const token = getState().auth?.token;
+      if (!token) {
+        return rejectWithValue('Please login to manage your addresses.');
+      }
       const response = await api.patch(`/user/addresses/${addressId}/default`);
       return response.data?.addresses || [];
     } catch (error) {

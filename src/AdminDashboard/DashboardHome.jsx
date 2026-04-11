@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   TrendingUp, 
   Package, 
@@ -17,40 +17,86 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
+  PieChart, Pie, Cell
 } from 'recharts';
 import AdminWishlistInsights from './AdminWishlistInsights';
+import { getDashboardStats } from '../services/adminService';
 
 const DashboardHome = () => {
-  
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const data = await getDashboardStats();
+        if (!mounted) return;
+        setDashboardData(data);
+      } catch (e) {
+        if (!mounted) return;
+        setError(e?.response?.data?.message || 'Failed to load dashboard stats.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    loadDashboard();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const formatCurrency = (value) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(Number(value || 0));
+
+  const metrics = dashboardData?.stats || {
+    totalRevenue: 0,
+    totalOrders: 0,
+    deliveredOrders: 0,
+    cancelledOrders: 0,
+  };
+
+  const deliveryRate = metrics.totalOrders > 0
+    ? `${Math.round((metrics.deliveredOrders / metrics.totalOrders) * 100)}% rate`
+    : '0% rate';
+
+  const cancelRate = metrics.totalOrders > 0
+    ? `${Math.round((metrics.cancelledOrders / metrics.totalOrders) * 100)}%`
+    : '0%';
+
   // --- 1. TOP STATS DATA ---
   const stats = [
-    { label: "Total Revenue", value: "₹8,42,000", change: "+12.5%", icon: TrendingUp, color: "bg-purple-50 text-[#985991]", trend: "up" },
-    { label: "Total Orders", value: "1,205", change: "+18%", icon: Package, color: "bg-blue-50 text-blue-600", trend: "up" },
-    { label: "Delivered", value: "1,180", change: "98% rate", icon: CheckCircle, color: "bg-green-50 text-green-600", trend: "neutral" },
-    { label: "Cancelled", value: "24", change: "-2%", icon: XCircle, color: "bg-red-50 text-red-500", trend: "down" },
+    { label: "Total Revenue", value: formatCurrency(metrics.totalRevenue), change: "Delivered/Paid", icon: TrendingUp, color: "bg-purple-50 text-[#985991]", trend: "up" },
+    { label: "Total Orders", value: Number(metrics.totalOrders || 0).toLocaleString('en-IN'), change: "All orders", icon: Package, color: "bg-blue-50 text-blue-600", trend: "up" },
+    { label: "Delivered", value: Number(metrics.deliveredOrders || 0).toLocaleString('en-IN'), change: deliveryRate, icon: CheckCircle, color: "bg-green-50 text-green-600", trend: "neutral" },
+    { label: "Cancelled", value: Number(metrics.cancelledOrders || 0).toLocaleString('en-IN'), change: cancelRate, icon: XCircle, color: "bg-red-50 text-red-500", trend: "down" },
   ];
 
   // --- 2. CHART DATA: Revenue Overview (Area Chart) ---
-  const revenueData = [
-    { name: 'Jan', current: 4000, previous: 2400 },
-    { name: 'Feb', current: 3000, previous: 1398 },
-    { name: 'Mar', current: 2000, previous: 9800 },
-    { name: 'Apr', current: 2780, previous: 3908 },
-    { name: 'May', current: 1890, previous: 4800 },
-    { name: 'Jun', current: 2390, previous: 3800 },
-    { name: 'Jul', current: 3490, previous: 4300 },
-    { name: 'Aug', current: 4200, previous: 3100 },
-    { name: 'Sep', current: 5100, previous: 4600 },
-  ];
+  const revenueData = useMemo(
+    () => (dashboardData?.revenueByMonth || []).map((item) => ({ month: item.month, revenue: Number(item.revenue || 0) })),
+    [dashboardData]
+  );
 
   // --- 3. CHART DATA: Sales by Category (Pie Chart) ---
-  const categoryData = [
-    { name: 'Skincare', value: 55 },
-    { name: 'Makeup', value: 30 },
-    { name: 'Haircare', value: 15 },
-  ];
+  const categoryData = useMemo(
+    () => (dashboardData?.salesByCategory || []).map((item) => ({ name: item.name, value: Number(item.value || 0) })),
+    [dashboardData]
+  );
   const COLORS = ['#985991', '#DCC9DA', '#A86BA1']; // Burgundy theme
+
+  const totalCategorySales = categoryData.reduce((sum, item) => sum + Number(item.value || 0), 0);
+  const leadingCategory = categoryData[0] || null;
+  const leadingCategoryPct = totalCategorySales > 0 && leadingCategory
+    ? Math.round((leadingCategory.value / totalCategorySales) * 100)
+    : 0;
 
   // Custom Tooltip for Area Chart
   const CustomTooltip = ({ active, payload, label }) => {
@@ -60,11 +106,7 @@ const DashboardHome = () => {
           <p className="text-sm font-bold text-gray-700 mb-2">{label}</p>
           <p className="text-sm text-[#985991] flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-[#985991]"></span>
-            Current: ₹{payload[0].value}
-          </p>
-          <p className="text-sm text-cyan-500 flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-cyan-500"></span>
-            Previous: ₹{payload[1].value}
+            Revenue: {formatCurrency(payload[0].value)}
           </p>
         </div>
       );
@@ -88,23 +130,41 @@ const DashboardHome = () => {
 
       {/* --- STATS GRID --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
+        {(loading ? Array.from({ length: 4 }) : stats).map((stat, index) => (
           <div key={index} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
             <div className="flex justify-between items-start mb-4">
-              <div className={`p-3 rounded-xl ${stat.color}`}>
-                <stat.icon size={22} />
-              </div>
-              <span className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${
-                stat.trend === 'up' ? 'bg-green-50 text-green-600' : 
-                stat.trend === 'down' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-600'
-              }`}>
-                {stat.change}
-                {stat.trend === 'up' ? <ArrowUpRight size={12} className="ml-1" /> : stat.trend === 'down' ? <ArrowDownRight size={12} className="ml-1" /> : null}
-              </span>
+              {loading ? (
+                <>
+                  <div className="p-3 rounded-xl bg-gray-100 w-[46px] h-[46px] animate-pulse" />
+                  <div className="h-6 w-20 bg-gray-100 rounded-full animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <div className={`p-3 rounded-xl ${stat.color}`}>
+                    <stat.icon size={22} />
+                  </div>
+                  <span className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${
+                    stat.trend === 'up' ? 'bg-green-50 text-green-600' :
+                    stat.trend === 'down' ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-600'
+                  }`}>
+                    {stat.change}
+                    {stat.trend === 'up' ? <ArrowUpRight size={12} className="ml-1" /> : stat.trend === 'down' ? <ArrowDownRight size={12} className="ml-1" /> : null}
+                  </span>
+                </>
+              )}
             </div>
             <div>
-               <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
-               <h3 className="text-gray-500 text-sm font-medium">{stat.label}</h3>
+              {loading ? (
+                <>
+                  <div className="h-8 w-36 bg-gray-100 rounded animate-pulse mb-2" />
+                  <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
+                  <h3 className="text-gray-500 text-sm font-medium">{stat.label}</h3>
+                </>
+              )}
             </div>
           </div>
         ))}
@@ -122,7 +182,9 @@ const DashboardHome = () => {
             </div>
             <button className="text-gray-400 hover:text-gray-600"><MoreHorizontal size={20}/></button>
           </div>
-          
+          {loading ? (
+            <div className="flex-1 w-full rounded-xl bg-gray-100 animate-pulse" />
+          ) : (
           <div className="flex-1 w-full min-h-0">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -131,20 +193,16 @@ const DashboardHome = () => {
                     <stop offset="5%" stopColor="#985991" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="#985991" stopOpacity={0}/>
                   </linearGradient>
-                  <linearGradient id="colorPrev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} dx={-10} tickFormatter={(value) => `₹${value}`} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} dx={-10} tickFormatter={(value) => `₹${Number(value).toLocaleString('en-IN')}`} />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#985991', strokeWidth: 1, strokeDasharray: '3 3' }} />
-                <Area type="monotone" dataKey="current" stroke="#985991" strokeWidth={3} fillOpacity={1} fill="url(#colorCurrent)" activeDot={{ r: 6, strokeWidth: 0 }} />
-                <Area type="monotone" dataKey="previous" stroke="#06b6d4" strokeWidth={2} fillOpacity={1} fill="url(#colorPrev)" strokeDasharray="5 5" />
+                <Area type="monotone" dataKey="revenue" stroke="#985991" strokeWidth={3} fillOpacity={1} fill="url(#colorCurrent)" activeDot={{ r: 6, strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          )}
         </div>
 
         {/* 2. DOUGHNUT CHART (Category Sales) */}
@@ -154,6 +212,9 @@ const DashboardHome = () => {
             <button className="text-gray-400 hover:text-gray-600"><MoreHorizontal size={20}/></button>
           </div>
 
+          {loading ? (
+            <div className="flex-1 rounded-xl bg-gray-100 animate-pulse" />
+          ) : (
           <div className="flex-1 relative flex items-center justify-center">
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
@@ -175,15 +236,23 @@ const DashboardHome = () => {
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   itemStyle={{ color: '#374151', fontWeight: 'bold' }}
+                  formatter={(value, name) => {
+                    const num = Number(value || 0);
+                    const pct = totalCategorySales > 0 ? Math.round((num / totalCategorySales) * 100) : 0;
+                    return [`${num} (${pct}%)`, name];
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
             {/* Center Text */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-               <span className="text-3xl font-bold text-gray-800">85%</span>
-               <span className="text-xs text-gray-500 uppercase tracking-wider">Skincare Lead</span>
+               <span className="text-3xl font-bold text-gray-800">{leadingCategoryPct}%</span>
+               <span className="text-xs text-gray-500 uppercase tracking-wider">
+                 {leadingCategory ? `${leadingCategory.name} Lead` : 'No Data'}
+               </span>
             </div>
           </div>
+          )}
 
           {/* Custom Legend */}
           <div className="mt-4 space-y-3">
@@ -193,13 +262,24 @@ const DashboardHome = () => {
                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }}></span>
                      <span className="text-gray-600">{item.name}</span>
                   </div>
-                  <span className="font-bold text-gray-800">{item.value}%</span>
+                  <span className="font-bold text-gray-800">
+                    {totalCategorySales > 0 ? `${Math.round((item.value / totalCategorySales) * 100)}%` : '0%'}
+                  </span>
                </div>
             ))}
+            {!loading && categoryData.length === 0 ? (
+              <p className="text-sm text-gray-400">No category sales data available yet.</p>
+            ) : null}
           </div>
         </div>
 
       </div>
+
+      {error ? (
+        <div className="bg-red-50 border border-red-100 text-red-700 text-sm px-4 py-3 rounded-xl">
+          {error}
+        </div>
+      ) : null}
 
       <AdminWishlistInsights />
     </div>

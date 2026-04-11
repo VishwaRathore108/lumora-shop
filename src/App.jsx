@@ -39,6 +39,7 @@ import AdminDashboard from './AdminDashboard/AdminDashboard';
 import DashboardHome from './AdminDashboard/DashboardHome';
 import Products from './AdminDashboard/Products';
 import Orders from './AdminDashboard/Orders';
+import AdminOrderDetails from './AdminDashboard/AdminOrderDetails';
 import Customers from './AdminDashboard/Customers';
 import Analytics from './AdminDashboard/Analytics';
 import Settings from './AdminDashboard/Settings';
@@ -52,6 +53,10 @@ import Security from './AdminDashboard/Security';
 import Admins from './AdminDashboard/Admins';
 import ManageDeals from './AdminDashboard/ManageDeals';
 import AdminLiveCarts from './AdminDashboard/AdminLiveCarts';
+import DriverOrders from './AdminDashboard/DriverOrders';
+import AssignedOrders from './AdminDashboard/AssignedOrders';
+import DriverDashboard from './DriverDashboard/DriverDashboard';
+import DriverHome from './DriverDashboard/DriverHome';
 
 
 //  User Dashboard (layout + nested pages)
@@ -195,6 +200,9 @@ function App() {
               <Route path="edit/:id" element={<EditProduct />} />
             </Route>
             <Route path="orders" element={<Orders />} />
+            <Route path="orders/:orderId" element={<AdminOrderDetails />} />
+            <Route path="assigned-orders" element={<AssignedOrders />} />
+            <Route path="driver-orders" element={<DriverOrders />} />
             <Route path="customers" element={<Customers />} />
             <Route path="live-carts" element={<AdminLiveCarts />} />
             <Route path="analytics" element={<Analytics />} />
@@ -211,6 +219,12 @@ function App() {
             <Route path="notifications" element={<Notifications />} />
             <Route path="security" element={<Security />} />
             <Route path="admins" element={<Admins />} />
+          </Route>
+
+          <Route path="/driver" element={<ProtectedRoute role="driver"><DriverDashboard /></ProtectedRoute>}>
+            <Route index element={<DriverHome />} />
+            <Route path="dashboard" element={<DriverHome />} />
+            <Route path="orders" element={<DriverOrders />} />
           </Route>
 
           {/* User Dashboard layout with nested routes (protected) */}

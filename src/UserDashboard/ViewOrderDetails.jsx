@@ -9,7 +9,26 @@ import {
    Calendar,
    ShoppingBag,
 } from 'lucide-react';
-import { fetchMyOrderById, selectMyOrderDetails, selectOrdersError, selectOrdersLoading } from '../features/orders/orderSlice';
+import api from '../services/apiClient';
+import {
+   fetchMyOrderById,
+   payNowForCodOrder,
+   selectMyOrderDetails,
+   selectOrdersError,
+   selectOrdersLoading,
+} from '../features/orders/orderSlice';
+
+const loadRazorpayScript = () => new Promise((resolve) => {
+   if (window.Razorpay) {
+      resolve(true);
+      return;
+   }
+   const script = document.createElement('script');
+   script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+   script.onload = () => resolve(true);
+   script.onerror = () => resolve(false);
+   document.body.appendChild(script);
+});
 
 const ViewOrderDetails = () => {
    const navigate = useNavigate();
@@ -37,6 +56,55 @@ const ViewOrderDetails = () => {
 
    const timeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
    const shippingAddress = order.shippingAddress || {};
+   const canPayNow =
+      String(order.paymentMethod || '').toLowerCase() === 'cod' &&
+      String(order.paymentStatus || '').toLowerCase() !== 'paid' &&
+      !['cancelled', 'delivered'].includes(String(order.orderStatus || '').toLowerCase());
+
+   const handlePayNow = async () => {
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+         alert('Unable to load payment gateway. Please try again.');
+         return;
+      }
+      try {
+         const [orderRes, keyRes] = await Promise.all([
+            api.post('/payments/create-order', { amount: Number(order.totalAmount || 0), currency: 'INR' }),
+            api.get('/payments/key'),
+         ]);
+         const payOrder = orderRes.data?.order;
+         const key = keyRes.data?.key;
+         if (!payOrder || !key) {
+            alert('Failed to start payment.');
+            return;
+         }
+         const razorpay = new window.Razorpay({
+            key,
+            amount: payOrder.amount,
+            currency: payOrder.currency,
+            name: 'Lumora Shop',
+            description: 'COD Order Pay Now',
+            order_id: payOrder.id,
+            theme: { color: '#985991' },
+            handler: async (response) => {
+               await dispatch(
+                  payNowForCodOrder({
+                     orderId: order._id,
+                     razorpayOrderId: response.razorpay_order_id,
+                     razorpayPaymentId: response.razorpay_payment_id,
+                     razorpaySignature: response.razorpay_signature,
+                  })
+               );
+               dispatch(fetchMyOrderById(order._id));
+               alert('Payment completed successfully.');
+            },
+         });
+         razorpay.open();
+      } catch (paymentError) {
+         console.error('handlePayNow error:', paymentError);
+         alert('Unable to start payment.');
+      }
+   };
 
    return (
       <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-6 animate-in slide-in-from-right duration-500">
@@ -141,6 +209,20 @@ const ViewOrderDetails = () => {
                      <CreditCard size={16} />
                      <span>Paid via {String(order.paymentMethod || 'cod').toUpperCase()}</span>
                   </div>
+                  {canPayNow ? (
+                     <>
+                        <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-2">
+                           Payment is pending. Your order will not be delivered until payment is completed.
+                        </p>
+                        <button
+                           type="button"
+                           onClick={handlePayNow}
+                           className="mt-3 w-full bg-[#985991] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-[#7A4774]"
+                        >
+                           Pay Now
+                        </button>
+                     </>
+                  ) : null}
                </div>
 
                {/* Shipping Details */}
@@ -158,6 +240,19 @@ const ViewOrderDetails = () => {
                      </div>
                   </div>
                   <div className="mt-4 pt-4 border-t border-gray-50 text-sm font-bold text-gray-700">{shippingAddress.phone}</div>
+               </div>
+
+               <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                  <h3 className="font-bold text-gray-800 mb-2">Assigned Driver</h3>
+                  <p className="text-sm text-gray-700">
+                     {order.delivery?.assignedDriver?.name || 'Not assigned yet'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                     {order.delivery?.assignedDriver?.mobile || 'Driver contact not available'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                     Assignment status: {(order.delivery?.assignmentStatus || 'unassigned').toUpperCase()}
+                  </p>
                </div>
 
             </div>

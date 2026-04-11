@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   ShoppingBag,
   Heart,
@@ -11,28 +12,152 @@ import {
   Sparkles
 } from 'lucide-react';
 import { selectUser } from '../features/auth/authSlice';
-
-// Mock Data
-const RECENT_ORDER = {
-  id: "#ORD-7782",
-  items: "Radiance Serum, Velvet Lip Tint (+1 more)",
-  date: "Oct 24, 2024",
-  status: "In Transit",
-  total: "₹2,598",
-  eta: "Arriving by Oct 26",
-  progress: 65
-};
-
-const RECOMMENDED_PRODUCTS = [
-  { id: 1, name: "Hydra-Glow Moisturizer", price: "₹899", category: "Skincare", img: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&q=80&w=200" },
-  { id: 2, name: "Silk Satin Hair Oil", price: "₹599", category: "Haircare", img: "https://images.unsplash.com/photo-1522338242992-e1a54906a8e6?auto=format&fit=crop&q=80&w=200" },
-  { id: 3, name: "Rose Clay Mask", price: "₹1,299", category: "Skincare", img: "https://images.unsplash.com/photo-1596462502278-27bfdd403348?auto=format&fit=crop&q=80&w=200" },
-];
+import {
+  fetchMyOrders,
+  selectMyOrders,
+  selectOrdersError,
+  selectOrdersLoading,
+} from '../features/orders/orderSlice';
+import {
+  selectWishlistItems,
+  selectWishlistLoading,
+} from '../features/wishlist/wishlistSlice';
+import {
+  fetchMyReviews,
+  selectMyReviews,
+  selectReviewsLoading,
+} from '../features/reviews/reviewSlice';
 
 const UserOverview = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const user = useSelector(selectUser);
+  const orders = useSelector(selectMyOrders);
+  const ordersLoading = useSelector(selectOrdersLoading);
+  const ordersError = useSelector(selectOrdersError);
+  const wishlistItems = useSelector(selectWishlistItems);
+  const wishlistLoading = useSelector(selectWishlistLoading);
+  const reviews = useSelector(selectMyReviews);
+  const reviewsLoading = useSelector(selectReviewsLoading);
+  const [bootTriggered, setBootTriggered] = useState(false);
+  const [bootDone, setBootDone] = useState(false);
+
   const displayName = user?.name?.trim() || user?.email?.split('@')[0] || 'there';
+
+  useEffect(() => {
+    dispatch(fetchMyOrders());
+    setBootTriggered(true);
+  }, [dispatch]);
+
+  useEffect(() => {
+    dispatch(fetchMyReviews());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!bootTriggered) return;
+    if (!ordersLoading && !wishlistLoading && !reviewsLoading) {
+      setBootDone(true);
+    }
+  }, [bootTriggered, ordersLoading, wishlistLoading, reviewsLoading]);
+
+  const sortedOrders = useMemo(() => {
+    const arr = Array.isArray(orders) ? [...orders] : [];
+    // Backend already sorts, but we keep this deterministic.
+    arr.sort((a, b) => new Date(b?.createdAt || 0).getTime() - new Date(a?.createdAt || 0).getTime());
+    return arr;
+  }, [orders]);
+
+  const latestOrder = sortedOrders[0] || null;
+
+  const statusToProgress = (rawStatus) => {
+    const s = String(rawStatus || '').trim().toLowerCase();
+    // Map backend orderStatus -> dashboard steps
+    switch (s) {
+      case 'pending':
+        return 25;
+      case 'confirmed':
+        return 50;
+      case 'assigned':
+        return 60;
+      case 'shipped':
+        return 80;
+      case 'delivered':
+        return 100;
+      case 'cancelled':
+        return 0;
+      default:
+        return 35;
+    }
+  };
+
+  const statusToLabel = (rawStatus) => {
+    const s = String(rawStatus || '').trim().toLowerCase();
+    if (['pending', 'confirmed', 'assigned'].includes(s)) return 'Processing';
+    if (s === 'shipped') return 'Shipped';
+    if (s === 'delivered') return 'Delivered';
+    if (s === 'cancelled') return 'Cancelled';
+    // Fallback: try to use original string, but keep it readable.
+    return rawStatus ? String(rawStatus).replace(/^\w/, (c) => c.toUpperCase()) : 'Processing';
+  };
+
+  const latestOrderStatusRaw = latestOrder?.orderStatus || latestOrder?.status || '';
+  const latestOrderProgress = statusToProgress(latestOrderStatusRaw);
+  const latestOrderStatusLabel = statusToLabel(latestOrderStatusRaw);
+
+  const latestOrderItems = Array.isArray(latestOrder?.items) ? latestOrder.items : [];
+  const latestOrderFirstItemName = latestOrderItems?.[0]?.product?.name || 'Product';
+  const latestOrderItemSummary =
+    latestOrderItems.length > 1
+      ? `${latestOrderFirstItemName} (+${latestOrderItems.length - 1} more)`
+      : latestOrderFirstItemName;
+
+  const latestOrderTotal =
+    latestOrder?.totalPrice ??
+    latestOrder?.totalAmount ??
+    0;
+
+  const etaText = latestOrder?.delivery?.assignmentExpiresAt
+    ? new Date(latestOrder.delivery.assignmentExpiresAt).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '—';
+
+  const recentPurchases = useMemo(() => {
+    const flattened = sortedOrders.flatMap((order) => (order?.items || []).map((item) => ({
+      productId: item?.product?._id || null,
+      name: item?.product?.name || 'Product',
+      imageUrl: item?.product?.images?.[0] || 'https://placehold.co/80x80?text=Item',
+      // Your current order list payload doesn't populate product category name here,
+      // so we fall back to whatever exists on the item/product.
+      categoryLabel: item?.product?.category?.name || item?.product?.category || item?.category || 'Product',
+      price: Number(item?.price ?? 0),
+    })));
+
+    // De-dupe by productId while keeping most recent order.
+    const seen = new Set();
+    const unique = [];
+    for (const p of flattened) {
+      const key = p.productId ? String(p.productId) : `${p.name}-${unique.length}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(p);
+      if (unique.length >= 4) break;
+    }
+    return unique;
+  }, [sortedOrders]);
+
+  const reviewScore = useMemo(() => {
+    const ratings = (Array.isArray(reviews) ? reviews : [])
+      .map((r) => Number(r?.rating))
+      .filter((n) => Number.isFinite(n));
+    if (!ratings.length) return 0;
+    return Number((ratings.reduce((sum, n) => sum + n, 0) / ratings.length).toFixed(1));
+  }, [reviews]);
+
+  const statsLoading = !bootDone;
+
   return (
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
 
@@ -72,7 +197,11 @@ const UserOverview = () => {
             <ShoppingBag size={22} />
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-800">12</p>
+            {statsLoading ? (
+              <div className="h-8 w-10 bg-gray-100 animate-pulse rounded" />
+            ) : (
+              <p className="text-2xl font-bold text-gray-800">{Array.isArray(orders) ? orders.length : 0}</p>
+            )}
             <p className="text-sm text-gray-500">Total Orders</p>
           </div>
         </div>
@@ -82,7 +211,11 @@ const UserOverview = () => {
             <Heart size={22} />
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-800">08</p>
+            {statsLoading ? (
+              <div className="h-8 w-14 bg-gray-100 animate-pulse rounded" />
+            ) : (
+              <p className="text-2xl font-bold text-gray-800">{Array.isArray(wishlistItems) ? wishlistItems.length : 0}</p>
+            )}
             <p className="text-sm text-gray-500">Wishlist Items</p>
           </div>
         </div>
@@ -92,7 +225,11 @@ const UserOverview = () => {
             <Star size={22} />
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-800">4.8</p>
+            {statsLoading ? (
+              <div className="h-8 w-16 bg-gray-100 animate-pulse rounded" />
+            ) : (
+              <p className="text-2xl font-bold text-gray-800">{reviewScore}</p>
+            )}
             <p className="text-sm text-gray-500">Review Score</p>
           </div>
         </div>
@@ -102,57 +239,98 @@ const UserOverview = () => {
 
         {/* Latest Order Tracking */}
         <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <Truck size={20} className="text-[#985991]" /> Track Order
-            </h3>
-            <span className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full font-bold">
-              {RECENT_ORDER.status}
-            </span>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-bold text-gray-800">{RECENT_ORDER.items}</p>
-                <p className="text-xs text-gray-500 mt-1">Order ID: {RECENT_ORDER.id}</p>
+          {latestOrder ? (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <Truck size={20} className="text-[#985991]" /> Track Order
+                </h3>
+                <span className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full font-bold">
+                  {latestOrderStatusLabel}
+                </span>
               </div>
-              <p className="text-sm font-bold text-[#985991]">{RECENT_ORDER.total}</p>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-bold text-gray-800">{latestOrderItemSummary}</p>
+                    <p className="text-xs text-gray-500 mt-1">Order ID: {latestOrder?._id}</p>
+                  </div>
+                  <p className="text-sm font-bold text-[#985991]">
+                    ₹{Number(latestOrderTotal || 0).toLocaleString('en-IN')}
+                  </p>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="relative pt-4 pb-2">
+                  <div className="flex justify-between text-xs font-medium text-gray-400 mb-2">
+                    <span className={latestOrderProgress >= 45 ? 'text-[#985991]' : ''}>Confirmed</span>
+                    <span className={latestOrderProgress >= 75 ? 'text-[#985991]' : ''}>Shipped</span>
+                    <span className={latestOrderProgress >= 90 ? 'text-[#985991]' : ''}>Out for Delivery</span>
+                    <span className={latestOrderProgress >= 100 ? 'text-[#985991]' : ''}>Delivered</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#985991] rounded-full transition-all duration-1000"
+                      style={{ width: `${latestOrderProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
+                    <Clock size={12} /> Estimated Delivery: <span className="font-bold text-gray-700">{etaText}</span>
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => navigate(`/user/orders/${latestOrder?._id}`)}
+                  className="w-full mt-2 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                >
+                  View Order Details
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col h-full">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <Truck size={20} className="text-[#985991]" /> Track Order
+                </h3>
+                <span className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full font-bold">
+                  {ordersLoading ? 'Loading...' : '—'}
+                </span>
+              </div>
+
+              <div className="space-y-4 mt-2 flex-1">
+                {ordersError ? (
+                  <p className="text-sm text-red-600">{ordersError}</p>
+                ) : ordersLoading ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm font-bold text-gray-800">Loading your latest order...</p>
+                    <p className="text-xs text-gray-500 mt-1">One moment.</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-sm font-bold text-gray-800">No active orders. Start shopping!</p>
+                    <p className="text-xs text-gray-500 mt-1">Your latest order status will show up here.</p>
+                    <div className="mt-6">
+                      <Link
+                        to="/shop"
+                        className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#985991] text-white rounded-full text-sm font-bold hover:bg-[#7A4774] transition-colors"
+                      >
+                        Shop Now <ArrowRight size={16} />
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-
-            {/* Progress Bar */}
-            <div className="relative pt-4 pb-2">
-              <div className="flex justify-between text-xs font-medium text-gray-400 mb-2">
-                <span className="text-[#985991]">Confirmed</span>
-                <span className="text-[#985991]">Shipped</span>
-                <span className={RECENT_ORDER.progress > 60 ? "text-[#985991]" : ""}>Out for Delivery</span>
-                <span>Delivered</span>
-              </div>
-              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#985991] rounded-full transition-all duration-1000"
-                  style={{ width: `${RECENT_ORDER.progress}%` }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
-                <Clock size={12} /> Estimated Delivery: <span className="font-bold text-gray-700">{RECENT_ORDER.eta}</span>
-              </p>
-            </div>
-
-            <button
-              onClick={() => navigate(`/user/orders/${RECENT_ORDER.id.replace('#', '')}`)}
-              className="w-full mt-2 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
-            >
-              View Order Details
-            </button>
-          </div>
+          )}
         </div>
 
-        {/* Recommended Products */}
+        {/* Recent Purchases */}
         <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <Sparkles size={20} className="text-yellow-500" /> Just for You
+              <Sparkles size={20} className="text-yellow-500" /> Recent Purchases
             </h3>
             <button className="p-2 hover:bg-gray-50 rounded-full text-gray-400 hover:text-[#985991]">
               <ArrowRight size={20} />
@@ -160,23 +338,56 @@ const UserOverview = () => {
           </div>
 
           <div className="space-y-4 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-            {RECOMMENDED_PRODUCTS.map((product) => (
-              <div key={product.id} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors group cursor-pointer border border-transparent hover:border-gray-100">
+            {recentPurchases.length > 0 ? (
+              recentPurchases.map((product, idx) => (
+                <div
+                  key={`${product.productId || product.name}-${idx}`}
+                  className="flex items-center gap-4 p-3 rounded-2xl hover:bg-gray-50 transition-colors group cursor-pointer border border-transparent hover:border-gray-100"
+                >
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                  <img src={product.img} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
                 </div>
                 <div className="flex-1">
                   <h4 className="text-sm font-bold text-gray-800">{product.name}</h4>
-                  <p className="text-xs text-gray-500">{product.category}</p>
+                  <p className="text-xs text-gray-500">{product.categoryLabel}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-[#985991]">{product.price}</p>
-                  <button className="text-[10px] font-bold text-gray-400 uppercase tracking-wider group-hover:text-[#985991] mt-1">
+                  <p className="text-sm font-bold text-[#985991]">
+                    ₹{Number(product.price || 0).toLocaleString('en-IN')}
+                  </p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (product.productId) navigate(`/product-details/${product.productId}`);
+                    }}
+                    className="text-[10px] font-bold text-gray-400 uppercase tracking-wider group-hover:text-[#985991] mt-1"
+                    type="button"
+                    aria-label={`View product ${product.name}`}
+                    disabled={!product.productId}
+                  >
                     View
                   </button>
                 </div>
               </div>
-            ))}
+              ))
+            ) : (
+              <div className="text-center py-10">
+                <p className="text-sm font-bold text-gray-800">No recent purchases yet.</p>
+                <p className="text-xs text-gray-500 mt-1">When you place an order, products will appear here.</p>
+                <div className="mt-6">
+                  <Link
+                    to="/shop"
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#985991] text-white rounded-full text-sm font-bold hover:bg-[#7A4774] transition-colors"
+                  >
+                    Start Shopping <ArrowRight size={16} />
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

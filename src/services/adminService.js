@@ -5,6 +5,12 @@ export async function getCustomers() {
   return res.data;
 }
 
+/** GET /api/admin/dashboard-stats */
+export async function getDashboardStats() {
+  const res = await api.get('/admin/dashboard-stats');
+  return res.data;
+}
+
 /**
  * POST /api/admin/customers - create customer. Body: { mobile, name? }.
  */
@@ -144,5 +150,31 @@ export async function createDeal(payload) {
 /** PUT /api/deals/:id */
 export async function updateDeal(id, payload) {
   const res = await api.put(`/deals/${id}`, payload);
+  return res.data;
+}
+
+// ——— Coupons (admin) ———
+
+/** GET /api/admin/coupons */
+export async function getAdminCoupons() {
+  const res = await api.get('/admin/coupons');
+  return res.data;
+}
+
+/** POST /api/admin/coupons */
+export async function createAdminCoupon(payload) {
+  const res = await api.post('/admin/coupons', payload);
+  return res.data;
+}
+
+/** PUT /api/admin/coupons/:id */
+export async function updateAdminCoupon(id, payload) {
+  const res = await api.put(`/admin/coupons/${id}`, payload);
+  return res.data;
+}
+
+/** DELETE /api/admin/coupons/:id */
+export async function deleteAdminCoupon(id) {
+  const res = await api.delete(`/admin/coupons/${id}`);
   return res.data;
 }

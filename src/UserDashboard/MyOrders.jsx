@@ -97,6 +97,17 @@ const MyOrders = () => {
                 </div>
               </div>
               <div className="p-6 space-y-3">
+                {String(order.paymentMethod || '').toLowerCase() === 'cod' &&
+                String(order.paymentStatus || '').toLowerCase() !== 'paid' ? (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1">
+                    COD payment pending. Order cannot be delivered until payment is completed.
+                  </p>
+                ) : null}
+                <p className="text-xs text-gray-600">
+                  Driver: {order.delivery?.assignedDriver?.name || 'Not assigned yet'}
+                  {order.delivery?.assignedDriver?.mobile ? ` (${order.delivery.assignedDriver.mobile})` : ''}
+                  {' '}| Request: {(order.delivery?.assignmentStatus || 'unassigned').toUpperCase()}
+                </p>
                 {(order.items || []).slice(0, 2).map((item, index) => (
                   <div key={`${order._id}-${index}`} className="flex items-center gap-3">
                     <img

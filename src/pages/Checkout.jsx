@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, HandCoins, MapPinHouse, PlusCircle, Trash2 } from 'lucide-react';
+import { CreditCard, HandCoins, MapPinHouse, PlusCircle, Sparkles, Tag, Trash2, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import api from '../services/apiClient';
 import { clearCart, selectCartItems, selectCartTotal } from '../features/cart/cartSlice';
+import { selectToken } from '../features/auth/authSlice';
 import {
   createAddress,
   deleteAddress,
@@ -21,6 +22,18 @@ import {
   selectPaymentMethod,
 } from '../features/checkout/checkoutSlice';
 import { createOrder } from '../features/orders/orderSlice';
+import {
+  clearAppliedCoupon,
+  clearCouponFieldError,
+  clearEligibleSuggestions,
+  fetchEligibleCoupons,
+  selectAppliedCoupon,
+  selectCouponFieldError,
+  selectCouponValidateLoading,
+  selectEligibleCoupons,
+  selectEligibleCouponsLoading,
+  validateCoupon,
+} from '../features/coupons/couponSlice';
 
 const INITIAL_ADDRESS_FORM = {
   fullName: '',
@@ -49,24 +62,58 @@ const Checkout = () => {
   const navigate = useNavigate();
   const cartItems = useSelector(selectCartItems);
   const cartTotal = useSelector(selectCartTotal);
+  const token = useSelector(selectToken);
   const savedAddresses = useSelector(selectSavedAddresses);
   const selectedAddress = useSelector(selectSelectedAddress);
   const selectedAddressId = useSelector(selectSelectedAddressId);
   const selectedPaymentMethod = useSelector(selectSelectedPaymentMethod);
   const addressLoading = useSelector(selectCheckoutLoading);
   const addressError = useSelector(selectCheckoutError);
+  const eligibleCoupons = useSelector(selectEligibleCoupons);
+  const eligibleLoading = useSelector(selectEligibleCouponsLoading);
+  const appliedCoupon = useSelector(selectAppliedCoupon);
+  const couponValidateLoading = useSelector(selectCouponValidateLoading);
+  const couponFieldError = useSelector(selectCouponFieldError);
 
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressForm, setAddressForm] = useState(INITIAL_ADDRESS_FORM);
   const [errorMsg, setErrorMsg] = useState('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+
+  const cartSignature = useMemo(
+    () => cartItems.map((item) => `${item.id}:${item.quantity}`).join('|'),
+    [cartItems]
+  );
 
   const shippingCost = useMemo(() => (cartTotal >= 999 ? 0 : 99), [cartTotal]);
-  const finalTotal = cartTotal + shippingCost;
+  const merchandiseAfterDiscount = appliedCoupon
+    ? Number(appliedCoupon.merchandiseAfterDiscount ?? cartTotal)
+    : cartTotal;
+  const discountAmount = appliedCoupon ? Number(appliedCoupon.discountAmount || 0) : 0;
+  const finalTotal = merchandiseAfterDiscount + shippingCost;
 
   useEffect(() => {
+    if (!token) {
+      setErrorMsg('Please login to continue checkout.');
+      navigate('/login', { replace: true, state: { redirectTo: '/checkout' } });
+      return;
+    }
     dispatch(fetchAddresses());
-  }, [dispatch]);
+  }, [dispatch, navigate, token]);
+
+  useEffect(() => {
+    dispatch(clearAppliedCoupon());
+  }, [cartSignature, dispatch]);
+
+  useEffect(() => {
+    if (!token) return;
+    if (!cartItems.length) {
+      dispatch(clearEligibleSuggestions());
+      return;
+    }
+    dispatch(fetchEligibleCoupons(cartItems));
+  }, [dispatch, token, cartSignature, cartItems]);
 
   const handleAddressInputChange = (event) => {
     const { name, value } = event.target;
@@ -128,6 +175,7 @@ const Checkout = () => {
         pincode: selectedAddress.pincode,
       },
       paymentMethod: selectedPaymentMethod,
+      ...(appliedCoupon?.code ? { couponCode: appliedCoupon.code } : {}),
     };
 
     if (selectedPaymentMethod === 'cod') {
@@ -186,6 +234,9 @@ const Checkout = () => {
               const paidOrderPayload = {
                 ...orderPayload,
                 paymentMethod: 'razorpay',
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpaySignature: response.razorpay_signature,
               };
               const created = await dispatch(createOrder(paidOrderPayload)).unwrap();
               dispatch(clearCart());
@@ -407,6 +458,104 @@ const Checkout = () => {
                   </label>
                 </div>
               </article>
+
+              <article className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                <h2 className="text-lg md:text-xl font-serif text-gray-900 mb-4 flex items-center gap-2">
+                  <Tag size={20} className="text-[#985991]" />
+                  3. Promo code
+                </h2>
+                {couponFieldError && (
+                  <div className="mb-3 flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+                    <span className="font-medium shrink-0">Could not apply:</span>
+                    <span>{couponFieldError}</span>
+                  </div>
+                )}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => {
+                      setCouponInput(e.target.value.toUpperCase());
+                      dispatch(clearCouponFieldError());
+                    }}
+                    placeholder="Enter coupon code"
+                    className="flex-1 border border-gray-300 rounded-xl px-3 py-2.5 text-sm font-mono uppercase tracking-wide focus:outline-none focus:border-[#985991] focus:ring-1 focus:ring-[#985991]/30"
+                  />
+                  <button
+                    type="button"
+                    disabled={couponValidateLoading || !couponInput.trim() || !cartItems.length}
+                    onClick={() =>
+                      dispatch(validateCoupon({ couponCode: couponInput.trim(), cartItems }))
+                    }
+                    className="sm:w-32 bg-gray-900 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {couponValidateLoading ? '…' : 'Apply'}
+                  </button>
+                </div>
+                {appliedCoupon && (
+                  <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-green-200 bg-green-50/80 px-3 py-2 text-sm text-green-900">
+                    <span>
+                      Applied <strong className="font-mono">{appliedCoupon.code}</strong> —{' '}
+                      {appliedCoupon.discountPercentage}% off
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        dispatch(clearAppliedCoupon());
+                        setCouponInput('');
+                      }}
+                      className="p-1 rounded-lg text-green-800 hover:bg-green-100"
+                      aria-label="Remove coupon"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                )}
+                <div className="mt-5">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-[#985991]" />
+                    Suggested for you
+                  </p>
+                  {eligibleLoading ? (
+                    <p className="text-sm text-gray-500">Finding eligible offers…</p>
+                  ) : eligibleCoupons.length === 0 ? (
+                    <p className="text-sm text-gray-500">No auto-suggestions for this cart. Try a code above.</p>
+                  ) : (
+                    <ul className="flex flex-col gap-2">
+                      {eligibleCoupons.slice(0, 4).map((c) => (
+                        <li key={c._id}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCouponInput(c.code);
+                              dispatch(clearCouponFieldError());
+                              dispatch(validateCoupon({ couponCode: c.code, cartItems }));
+                            }}
+                            className="w-full text-left rounded-xl border border-gray-200 hover:border-[#985991]/50 hover:bg-[#fbf7fb] px-4 py-3 transition-colors group"
+                          >
+                            <div className="flex justify-between items-start gap-2">
+                              <div>
+                                <p className="font-mono font-bold text-[#985991]">{c.code}</p>
+                                <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
+                                  {c.description || c.name}
+                                </p>
+                              </div>
+                              <span className="text-sm font-semibold text-gray-900 shrink-0">
+                                {c.discountPercentage}% off
+                              </span>
+                            </div>
+                            {Number(c.discountAmount) > 0 && (
+                              <p className="text-xs text-green-700 mt-2">
+                                Save ₹{Number(c.discountAmount).toFixed(0)} on this order
+                              </p>
+                            )}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </article>
             </section>
 
             <aside className="lg:sticky lg:top-6 h-fit bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
@@ -433,18 +582,35 @@ const Checkout = () => {
 
               <div className="space-y-2 text-sm text-gray-600 mb-4">
                 <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>₹{cartTotal}</span>
+                  <span>Original total (items)</span>
+                  <span>₹{Number(cartTotal).toLocaleString('en-IN')}</span>
                 </div>
+                {appliedCoupon && discountAmount > 0 && (
+                  <div className="flex justify-between text-green-700">
+                    <span>
+                      Discount (code:{' '}
+                      <span className="font-mono font-semibold">{appliedCoupon.code}</span>)
+                    </span>
+                    <span>-₹{discountAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {appliedCoupon && (
+                  <div className="flex justify-between font-medium text-gray-900">
+                    <span>After discount</span>
+                    <span>₹{merchandiseAfterDiscount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span>Shipping</span>
-                  <span>{shippingCost === 0 ? 'FREE' : `₹${shippingCost}`}</span>
+                  <span>{shippingCost === 0 ? 'FREE' : `₹${shippingCost.toLocaleString('en-IN')}`}</span>
                 </div>
               </div>
 
               <div className="border-t border-gray-200 pt-3 mb-4 flex justify-between items-center">
-                <span className="text-sm font-semibold text-gray-900">Total</span>
-                <span className="text-2xl font-serif text-gray-900">₹{finalTotal}</span>
+                <span className="text-sm font-semibold text-gray-900">Final amount</span>
+                <span className="text-2xl font-serif text-gray-900">
+                  ₹{finalTotal.toLocaleString('en-IN')}
+                </span>
               </div>
 
               {errorMsg && (

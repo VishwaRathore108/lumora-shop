@@ -20,13 +20,15 @@ import {
   Radar,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import logoImg from '../assets/logo.png';
-import { logout } from '../features/auth/authSlice';
+import { logout, selectUser } from '../features/auth/authSlice';
 
 const AdminSidebar = ({ isOpen, closeSidebar }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const user = useSelector(selectUser);
+  const isDriver = user?.role === 'driver';
 
   const handleLogout = () => {
     dispatch(logout());
@@ -41,6 +43,8 @@ const AdminSidebar = ({ isOpen, closeSidebar }) => {
         { id: 'dashboard', label: "Dashboard", icon: LayoutDashboard },
         { id: 'products', label: "Products", icon: Package },
         { id: 'orders', label: "Orders", icon: ShoppingBag },
+        { id: 'assigned-orders', label: "Assigned Orders", icon: Truck },
+        { id: 'driver-orders', label: "Driver Panel", icon: Truck },
         { id: 'categories', label: "Categories", icon: Tag },
         { id: 'coupons', label: "Coupons & Offers", icon: TicketPercent },
         { id: 'deals', label: "Manage Deals", icon: Clock3 },
@@ -72,6 +76,15 @@ const AdminSidebar = ({ isOpen, closeSidebar }) => {
       ]
     }
   ];
+  const visibleGroups = isDriver
+    ? NAV_GROUPS.map((group) => ({
+        ...group,
+        items: group.items.filter((item) => item.id === 'driver-orders'),
+      })).filter((group) => group.items.length > 0)
+    : NAV_GROUPS.map((group) => ({
+        ...group,
+        items: group.items.filter((item) => item.id !== 'driver-orders'),
+      })).filter((group) => group.items.length > 0);
 
   return (
     <>
@@ -105,7 +118,7 @@ const AdminSidebar = ({ isOpen, closeSidebar }) => {
 
         {/* 2. Navigation Items (Scrollable with Sections) */}
         <nav className="flex-1 px-4 py-4 space-y-6 overflow-y-auto custom-scrollbar">
-          {NAV_GROUPS.map((group, index) => (
+          {visibleGroups.map((group, index) => (
             <div key={index}>
               {group.title && (
                 <h3 className="px-4 mb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
