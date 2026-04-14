@@ -17,6 +17,7 @@ import {
    selectOrdersError,
    selectOrdersLoading,
 } from '../features/orders/orderSlice';
+import { resolveOrderPaymentBreakdown } from '../utils/orderPaymentBreakdown';
 
 const loadRazorpayScript = () => new Promise((resolve) => {
    if (window.Razorpay) {
@@ -54,6 +55,9 @@ const ViewOrderDetails = () => {
       return <div className="p-8 text-gray-500">Order not found.</div>;
    }
 
+   const pay = resolveOrderPaymentBreakdown(order);
+   const amountDue = pay.grandTotal;
+
    const timeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
    const shippingAddress = order.shippingAddress || {};
    const canPayNow =
@@ -69,7 +73,7 @@ const ViewOrderDetails = () => {
       }
       try {
          const [orderRes, keyRes] = await Promise.all([
-            api.post('/payments/create-order', { amount: Number(order.totalAmount || 0), currency: 'INR' }),
+            api.post('/payments/create-order', { amount: Number(amountDue || 0), currency: 'INR' }),
             api.get('/payments/key'),
          ]);
          const payOrder = orderRes.data?.order;
@@ -193,17 +197,45 @@ const ViewOrderDetails = () => {
                   <h3 className="font-bold text-gray-800 mb-4">Order Summary</h3>
                   <div className="space-y-3 text-sm text-gray-600 border-b border-gray-50 pb-4">
                      <div className="flex justify-between">
-                        <span>Subtotal</span>
-                        <span className="font-bold">₹{Number(order.totalAmount || 0).toLocaleString('en-IN')}</span>
+                        <span>Items total</span>
+                        <span className="font-semibold text-gray-900">
+                           ₹{Number(pay.subtotal).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                        </span>
                      </div>
                      <div className="flex justify-between">
                         <span>Shipping</span>
-                        <span className="text-[#985991] font-bold">Included</span>
+                        <span className="font-semibold text-gray-900">
+                           {pay.shippingFee === null
+                              ? '—'
+                              : pay.shippingFee === 0
+                                ? 'FREE'
+                                : `+₹${Number(pay.shippingFee).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
+                        </span>
                      </div>
+                     {pay.discountAmount > 0 ? (
+                        <div className="flex justify-between text-emerald-700">
+                           <span>
+                              Coupon discount
+                              {pay.couponApplied ? (
+                                 <span className="ml-1 font-mono text-xs">({pay.couponApplied})</span>
+                              ) : null}
+                           </span>
+                           <span className="font-semibold">
+                              −₹{Number(pay.discountAmount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                           </span>
+                        </div>
+                     ) : null}
+                     {pay.isLegacy ? (
+                        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                           This order predates stored payment breakdown; totals are inferred from line items where possible.
+                        </p>
+                     ) : null}
                   </div>
                   <div className="flex justify-between items-center pt-4">
-                     <span className="font-bold text-gray-800 text-lg">Total</span>
-                     <span className="font-bold text-[#985991] text-xl">₹{Number(order.totalAmount || 0).toLocaleString('en-IN')}</span>
+                     <span className="font-bold text-gray-800 text-lg">Total paid</span>
+                     <span className="font-bold text-[#985991] text-xl">
+                        ₹{Number(pay.grandTotal).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                     </span>
                   </div>
                   <div className="mt-4 bg-gray-50 p-3 rounded-xl flex items-center gap-3 text-xs text-gray-600">
                      <CreditCard size={16} />

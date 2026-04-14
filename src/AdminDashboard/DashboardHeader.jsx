@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Menu, 
   Bell, 
@@ -9,13 +9,42 @@ import {
   Settings 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { logout } from '../features/auth/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { logout, selectUser } from '../features/auth/authSlice';
 
-const DashboardHeader = ({ title, user, toggleSidebar }) => {
+const DashboardHeader = ({ title, toggleSidebar }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const reduxUser = useSelector(selectUser);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const { displayName, email, avatarUrl, avatarInitials } = useMemo(() => {
+    const name =
+      (reduxUser?.name && String(reduxUser.name).trim()) ||
+      (reduxUser?.firstName && String(reduxUser.firstName).trim()) ||
+      '';
+    const display = name || 'User';
+    const pic =
+      reduxUser?.profilePicture ||
+      reduxUser?.profilePic ||
+      reduxUser?.profileImage ||
+      '';
+    const parts = display.split(/\s+/).filter(Boolean);
+    let initials = 'U';
+    if (parts.length >= 2) {
+      initials = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    } else if (parts.length === 1 && parts[0].length >= 2) {
+      initials = parts[0].slice(0, 2).toUpperCase();
+    } else if (parts.length === 1) {
+      initials = parts[0][0].toUpperCase();
+    }
+    return {
+      displayName: display,
+      email: reduxUser?.email || '',
+      avatarUrl: pic,
+      avatarInitials: initials,
+    };
+  }, [reduxUser]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -86,17 +115,25 @@ const DashboardHeader = ({ title, user, toggleSidebar }) => {
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             className="flex items-center gap-3 p-1.5 pr-2 rounded-full hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all"
           >
-            {/* User Image */}
-            <img 
-              src={user.image} 
-              alt="Profile" 
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-100"
-            />
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=""
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-100"
+              />
+            ) : (
+              <div
+                className="w-10 h-10 rounded-full ring-2 ring-gray-100 bg-[#985991] text-white text-sm font-semibold flex items-center justify-center shrink-0"
+                aria-hidden
+              >
+                {avatarInitials}
+              </div>
+            )}
             
             {/* Name & Email (Hidden on Mobile) */}
             <div className="hidden md:flex flex-col items-start">
-              <span className="text-sm font-bold text-gray-800 leading-none">{user.name}</span>
-              <span className="text-[11px] text-gray-500 leading-none mt-1">{user.email}</span>
+              <span className="text-sm font-bold text-gray-800 leading-none">{displayName}</span>
+              <span className="text-[11px] text-gray-500 leading-none mt-1">{email}</span>
             </div>
 
             {/* Three Dots Icon */}
@@ -110,7 +147,10 @@ const DashboardHeader = ({ title, user, toggleSidebar }) => {
               {/* Dropdown Header */}
               <div className="px-4 py-3 border-b border-gray-100 mb-2">
                 <p className="text-sm font-bold text-gray-800">Signed in as</p>
-                <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
+                {email ? (
+                  <p className="text-xs text-gray-500 truncate mt-0.5">{email}</p>
+                ) : null}
               </div>
 
               {/* Menu Items */}

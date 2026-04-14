@@ -7,8 +7,7 @@ import {
   selectOrdersError,
   selectOrdersLoading,
 } from '../features/orders/orderSlice';
-
-const GST_RATE = 0.18;
+import { resolveOrderPaymentBreakdown } from '../utils/orderPaymentBreakdown';
 
 const escapeHtml = (val) =>
   String(val ?? '')
@@ -18,17 +17,10 @@ const escapeHtml = (val) =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 
-const getInvoiceTotals = (totalInclusiveGst) => {
-  const total = Number(totalInclusiveGst) || 0;
-  // If stored totalAmount already includes GST, back-calculate:
-  // Base = Total / 1.18, GST = Total - Base
-  const baseAmount = total / (1 + GST_RATE);
-  const gstAmount = total - baseAmount;
-  return {
-    baseAmount,
-    gstAmount,
-    totalAmount: total,
-  };
+const formatRs = (n) => {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return '—';
+  return `₹${x.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const DashboardBilling = () => {
@@ -48,7 +40,7 @@ const DashboardBilling = () => {
   }, [orders]);
 
   const handleDownloadInvoice = (order) => {
-    const totals = getInvoiceTotals(order?.totalAmount || order?.totalPrice || 0);
+    const br = resolveOrderPaymentBreakdown(order);
 
     const orderId = String(order?._id || order?.id || '');
     const dateStr = order?.createdAt
@@ -76,6 +68,11 @@ const DashboardBilling = () => {
 
     const safeOrderId = escapeHtml(orderId);
     const safeDate = escapeHtml(dateStr);
+    const shipLine =
+      br.shippingFee === null ? '—' : `₹${Number(br.shippingFee).toFixed(2)}`;
+    const couponNote = br.couponApplied
+      ? escapeHtml(br.couponApplied)
+      : '—';
 
     const html = `
       <!doctype html>
@@ -98,9 +95,10 @@ const DashboardBilling = () => {
             .right { text-align:right; }
             .left { text-align:left; }
             .summary { margin-top: 16px; display:flex; justify-content:flex-end; }
-            .summary table { width: 360px; }
+            .summary table { width: 380px; }
             .foot { margin-top: 18px; font-size: 12px; color:#6B7280; text-align:center; }
             .pill { display:inline-block; font-size: 12px; padding: 6px 10px; border-radius:999px; background:#ECFDF3; color:#065F46; border:1px solid #BBF7D0; font-weight:700; }
+            .muted { font-size: 11px; color:#6B7280; }
             @media print {
               body { margin: 12px; }
               .pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -121,6 +119,7 @@ const DashboardBilling = () => {
 
           <div class="box">
             <div class="meta"><b>Date:</b> ${safeDate}</div>
+            ${br.isLegacy ? '<p class="muted">This order was placed before detailed payment breakdown was stored; totals are best-effort.</p>' : ''}
 
             <table>
               <thead>
@@ -140,16 +139,20 @@ const DashboardBilling = () => {
               <table>
                 <tbody>
                   <tr>
-                    <td class="left">Base Amount</td>
-                    <td class="right"><b>Rs ${totals.baseAmount.toFixed(2)}</b></td>
+                    <td class="left">Items total (subtotal)</td>
+                    <td class="right"><b>₹${Number(br.subtotal).toFixed(2)}</b></td>
                   </tr>
                   <tr>
-                    <td class="left">GST (18%)</td>
-                    <td class="right"><b>Rs ${totals.gstAmount.toFixed(2)}</b></td>
+                    <td class="left">Shipping charge</td>
+                    <td class="right"><b>+ ${shipLine}</b></td>
                   </tr>
                   <tr>
-                    <td class="left">Total Paid</td>
-                    <td class="right"><b>Rs ${totals.totalAmount.toFixed(2)}</b></td>
+                    <td class="left">Coupon discount ${br.couponApplied ? `(${couponNote})` : ''}</td>
+                    <td class="right"><b>- ₹${Number(br.discountAmount).toFixed(2)}</b></td>
+                  </tr>
+                  <tr>
+                    <td class="left"><b>Total paid</b></td>
+                    <td class="right"><b>₹${Number(br.grandTotal).toFixed(2)}</b></td>
                   </tr>
                 </tbody>
               </table>
@@ -187,7 +190,9 @@ const DashboardBilling = () => {
           </div>
           <div>
             <h3 className="text-xl font-semibold text-gray-900">Billing & Invoices</h3>
-            <p className="text-sm text-gray-500">View your previous orders, tax breakdown, and invoice actions.</p>
+            <p className="text-sm text-gray-500">
+              Order totals match what was charged (including shipping and coupons).
+            </p>
           </div>
         </div>
 
@@ -199,14 +204,15 @@ const DashboardBilling = () => {
 
         {!loading && !error && (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px]">
+            <table className="w-full min-w-[900px]">
               <thead>
                 <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 border-b border-gray-100">
                   <th className="py-3 pr-3">Order ID</th>
                   <th className="py-3 pr-3">Date</th>
-                  <th className="py-3 pr-3">Base Amount</th>
-                  <th className="py-3 pr-3">GST (18%)</th>
-                  <th className="py-3 pr-3">Total Paid</th>
+                  <th className="py-3 pr-3">Items total</th>
+                  <th className="py-3 pr-3">Shipping</th>
+                  <th className="py-3 pr-3">Discount</th>
+                  <th className="py-3 pr-3">Total paid</th>
                   <th className="py-3 pr-3">Status</th>
                   <th className="py-3 text-right">Action</th>
                 </tr>
@@ -214,7 +220,7 @@ const DashboardBilling = () => {
               <tbody>
                 {sortedOrders.length > 0 ? (
                   sortedOrders.map((order) => {
-                    const totals = getInvoiceTotals(order?.totalAmount || 0);
+                    const br = resolveOrderPaymentBreakdown(order);
                     const paymentStatus = order?.paymentStatus || order?.paymentMethod || 'paid';
                     return (
                       <tr key={order._id} className="border-b border-gray-50 text-sm text-gray-700">
@@ -222,11 +228,25 @@ const DashboardBilling = () => {
                         <td className="py-4 pr-3">
                           {order?.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN') : '—'}
                         </td>
-                        <td className="py-4 pr-3">Rs {totals.baseAmount.toFixed(2)}</td>
-                        <td className="py-4 pr-3">Rs {totals.gstAmount.toFixed(2)}</td>
-                        <td className="py-4 pr-3 font-semibold text-gray-900">
-                          Rs {totals.totalAmount.toFixed(2)}
+                        <td className="py-4 pr-3">{formatRs(br.subtotal)}</td>
+                        <td className="py-4 pr-3">
+                          {br.shippingFee === null ? '—' : formatRs(br.shippingFee)}
                         </td>
+                        <td className="py-4 pr-3">
+                          {br.discountAmount > 0 ? (
+                            <span>
+                              -{formatRs(br.discountAmount)}
+                              {br.couponApplied ? (
+                                <span className="block text-[10px] text-gray-500 font-mono mt-0.5">
+                                  {br.couponApplied}
+                                </span>
+                              ) : null}
+                            </span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="py-4 pr-3 font-semibold text-gray-900">{formatRs(br.grandTotal)}</td>
                         <td className="py-4 pr-3">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
                             {paymentStatus}
@@ -247,7 +267,7 @@ const DashboardBilling = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={7} className="py-16 text-center text-gray-500">
+                    <td colSpan={8} className="py-16 text-center text-gray-500">
                       No orders found yet.
                     </td>
                   </tr>

@@ -175,6 +175,12 @@ const Checkout = () => {
         pincode: selectedAddress.pincode,
       },
       paymentMethod: selectedPaymentMethod,
+      paymentBreakdown: {
+        subtotal: cartTotal,
+        shippingFee: shippingCost,
+        discountAmount,
+        grandTotal: finalTotal,
+      },
       ...(appliedCoupon?.code ? { couponCode: appliedCoupon.code } : {}),
     };
 

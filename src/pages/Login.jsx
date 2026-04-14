@@ -213,7 +213,7 @@ const Login = () => {
 
           <div className="mt-8 text-center border-t border-gray-100 pt-6">
             <Link to="/" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
-              &larr; Return to Lumora Shop
+              &larr; Return to The Beauty Hub
             </Link>
           </div>
         </div>

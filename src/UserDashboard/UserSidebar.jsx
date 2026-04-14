@@ -12,7 +12,7 @@ import {
   ReceiptText,
   X,
 } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import logoImg from '../assets/logo.png';
 import { logout, selectUser } from '../features/auth/authSlice';
@@ -28,7 +28,7 @@ const UserSidebar = ({ isOpen, closeSidebar }) => {
   };
 
   const displayName = user?.name && user.name.trim().length > 0 ? user.name.trim() : 'Beauty Enthusiast';
-  const profileImage = user?.profilePic || user?.profileImage || '';
+  const profileImage = user?.profilePicture || user?.profilePic || user?.profileImage || '';
   const userInitials = displayName
     .split(' ')
     .filter(Boolean)
@@ -65,13 +65,17 @@ const UserSidebar = ({ isOpen, closeSidebar }) => {
 
         {/* 1. Header (Logo) */}
         <div className="p-6 flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
+          <Link
+            to="/"
+            onClick={closeSidebar}
+            className="flex items-center gap-2 min-w-0 shrink-0 no-underline text-inherit"
+          >
             <img
               src={logoImg}
               alt="Lumora"
               className="h-9 w-auto max-w-[140px] object-contain object-left"
             />
-          </div>
+          </Link>
           <button onClick={closeSidebar} className="md:hidden text-gray-400 hover:text-red-500 shrink-0">
             <X size={24} />
           </button>

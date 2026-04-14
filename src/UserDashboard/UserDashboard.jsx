@@ -9,7 +9,10 @@ const UserDashboard = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const user = useSelector(selectUser);
-  const displayName = user?.name && user.name.trim().length > 0 ? user.name : 'vishwa';
+  const displayName =
+    (user?.name && String(user.name).trim()) ||
+    (user?.firstName && String(user.firstName).trim()) ||
+    'User';
 
   // Derive current section from URL for header title/search behavior
   const pathParts = location.pathname.split('/').filter(Boolean);

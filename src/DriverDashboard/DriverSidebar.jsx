@@ -1,6 +1,6 @@
 import React from 'react';
 import { Home, Truck, LogOut, X } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import logoImg from '../assets/logo.png';
 import { logout } from '../features/auth/authSlice';
@@ -24,7 +24,13 @@ const DriverSidebar = ({ isOpen, closeSidebar }) => {
         className={`fixed top-0 left-0 h-full w-72 bg-white z-50 md:static md:translate-x-0 transition-transform duration-300 border-r border-gray-100 flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="p-6 flex items-center justify-between">
-          <img src={logoImg} alt="Lumora Driver" className="h-9 w-auto max-w-[140px] object-contain object-left" />
+          <Link
+            to="/"
+            onClick={closeSidebar}
+            className="flex items-center gap-2 min-w-0 shrink-0 no-underline text-inherit"
+          >
+            <img src={logoImg} alt="Lumora Driver" className="h-9 w-auto max-w-[140px] object-contain object-left" />
+          </Link>
           <button onClick={closeSidebar} className="md:hidden text-gray-500 hover:text-red-500">
             <X size={24} />
           </button>

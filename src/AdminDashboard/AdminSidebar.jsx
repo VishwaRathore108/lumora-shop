@@ -19,7 +19,7 @@ import {
   UserCog,
   Radar,
 } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import logoImg from '../assets/logo.png';
 import { logout, selectUser } from '../features/auth/authSlice';
@@ -103,13 +103,17 @@ const AdminSidebar = ({ isOpen, closeSidebar }) => {
 
         {/* 1. Header (Logo + Close Button) */}
         <div className="p-6 flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
+          <Link
+            to="/"
+            onClick={closeSidebar}
+            className="flex items-center gap-2 min-w-0 shrink-0 no-underline text-inherit"
+          >
             <img
               src={logoImg}
               alt="Lumora Admin"
               className="h-9 w-auto max-w-[140px] object-contain object-left"
             />
-          </div>
+          </Link>
 
           <button onClick={closeSidebar} className="md:hidden text-gray-500 hover:text-red-500 shrink-0">
             <X size={24} />

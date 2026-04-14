@@ -11,6 +11,7 @@ import {
   selectOrdersError,
   selectOrdersLoading,
 } from '../features/orders/orderSlice';
+import { resolveOrderPaymentBreakdown } from '../utils/orderPaymentBreakdown';
 
 const AdminOrderDetails = () => {
   const navigate = useNavigate();
@@ -80,6 +81,7 @@ const AdminOrderDetails = () => {
   const shippingAddress = order.shippingAddress || {};
   const timeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
   const deliveryTimeline = Array.isArray(order.delivery?.history) ? order.delivery.history : [];
+  const pay = resolveOrderPaymentBreakdown(order);
 
   return (
     <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-6">
@@ -170,12 +172,50 @@ const AdminOrderDetails = () => {
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
             <h3 className="font-bold text-gray-800 mb-4">Payment Summary</h3>
+            <p className="text-xs text-gray-500 mb-3">
+              Amounts below match what the customer was charged (Razorpay / COD), including shipping and coupons.
+            </p>
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex justify-between">
-                <span>Total</span>
-                <span className="font-semibold">Rs {Number(order.totalAmount || 0).toLocaleString('en-IN')}</span>
+                <span>Items total (subtotal)</span>
+                <span className="font-semibold text-gray-900">
+                  ₹{Number(pay.subtotal).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Shipping charge</span>
+                <span className="font-semibold text-gray-900">
+                  {pay.shippingFee === null
+                    ? '—'
+                    : pay.shippingFee === 0
+                      ? 'FREE'
+                      : `+₹${Number(pay.shippingFee).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}
+                </span>
+              </div>
+              <div className="flex justify-between text-emerald-700">
+                <span>
+                  Coupon discount
+                  {pay.couponApplied ? (
+                    <span className="ml-1 font-mono text-xs text-gray-600">({pay.couponApplied})</span>
+                  ) : null}
+                </span>
+                <span className="font-semibold">
+                  −₹{Number(pay.discountAmount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-gray-100 text-base">
+                <span className="font-bold text-gray-900">Total collected</span>
+                <span className="font-bold text-[#985991]">
+                  ₹{Number(pay.grandTotal).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                </span>
               </div>
             </div>
+            {pay.isLegacy ? (
+              <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                Legacy order: breakdown may be incomplete; stored order total is ₹
+                {Number(order.totalAmount || 0).toLocaleString('en-IN')}.
+              </p>
+            ) : null}
             <div className="mt-4 bg-gray-50 p-3 rounded-xl flex items-center gap-2 text-xs text-gray-600">
               <CreditCard size={14} />
               {String(order.paymentMethod || 'cod').toUpperCase()} / {String(order.paymentStatus || 'pending').toUpperCase()}

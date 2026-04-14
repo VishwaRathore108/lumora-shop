@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, User, Search, X, Instagram, Facebook, Twitter, Linkedin, Sparkles, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { ShoppingCart, User, Search, X, Instagram, Facebook, Twitter, Linkedin, Sparkles, HelpCircle, ChevronDown, ChevronUp, LayoutGrid, ShoppingBag, LogOut } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import logoImg from '../assets/logo.png';
 import gsap from 'gsap';
 import { useCart } from '../context/CartContext';
+import { logout, selectToken, selectUser } from '../features/auth/authSlice';
 import serumIcon from '../assets/serum.jpg';
 import moistIcon from '../assets/moisture.jpg';
 import sunIcon from '../assets/sunscreen.jpg';
@@ -55,9 +57,13 @@ const BRAND_SHOWCASE = [
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const token = useSelector(selectToken);
+  const authUser = useSelector(selectUser);
   const navRef = useRef(null);
   const linksRef = useRef([]);
   const iconsRef = useRef(null);
+  const accountMenuRef = useRef(null);
 
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState('');
@@ -66,8 +72,46 @@ const Navbar = () => {
   const [activeCategory, setActiveCategory] = useState(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [openMobileCategory, setOpenMobileCategory] = useState(null);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const { cartItems } = useCart();
   const { brands: apiBrands } = useNavData();
+
+  const isLoggedIn = Boolean(token && authUser);
+
+  const { firstName, profilePic, avatarInitials, dashboardPath, ordersPath } = useMemo(() => {
+    const u = authUser;
+    const full =
+      (u?.name && String(u.name).trim()) ||
+      (u?.firstName && String(u.firstName).trim()) ||
+      '';
+    const first = full ? full.split(/\s+/)[0] : 'User';
+    const pic = u?.profilePicture || u?.profilePic || u?.profileImage || '';
+    const parts = (full || 'User').split(/\s+/).filter(Boolean);
+    let initials = 'U';
+    if (parts.length >= 2) {
+      initials = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    } else if (parts.length === 1 && parts[0].length >= 2) {
+      initials = parts[0].slice(0, 2).toUpperCase();
+    } else if (parts.length === 1) {
+      initials = parts[0][0].toUpperCase();
+    }
+    const role = u?.role;
+    const dashboardPath =
+      role === 'admin' ? '/admin' : role === 'driver' ? '/driver' : '/user';
+    const ordersPath =
+      role === 'admin'
+        ? '/admin/orders'
+        : role === 'driver'
+          ? '/driver/orders'
+          : '/user/orders';
+    return {
+      firstName: first,
+      profilePic: pic,
+      avatarInitials: initials,
+      dashboardPath,
+      ordersPath,
+    };
+  }, [authUser]);
 
   // Use static dropdowns for a consistent UI (Women, Men, Kids, Skincare, Hair, Makeup, Body)
   const categoryDropdowns = CATEGORY_DROPDOWNS;
@@ -97,6 +141,22 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target)) {
+        setIsAccountOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleAccountLogout = () => {
+    dispatch(logout());
+    setIsAccountOpen(false);
+    navigate('/', { replace: true });
+  };
 
   const handleSearch = (e) => {
     if (e.key === 'Enter' && query.trim() !== '') {
@@ -296,14 +356,80 @@ const Navbar = () => {
               </span>
             )}
           </button>
-          <Link to="/login" className="hidden md:block">
-            <span className={isHeroNav ? 'bg-white/20 hover:bg-white/30 text-white border border-white/30 px-4 py-1.5 rounded-full text-xs font-medium transition-colors' : 'bg-[#985991] hover:bg-[#7A4774] text-white px-4 py-1.5 rounded-full text-xs font-medium transition-colors'}>
-              Sign In
-            </span>
-          </Link>
-          <Link to="/login" className={isHeroNav ? 'md:hidden text-white/80 hover:text-white' : 'md:hidden text-gray-500 hover:text-[#985991]'}>
-            <User size={18} />
-          </Link>
+          {!isLoggedIn ? (
+            <>
+              <Link to="/login" className="hidden md:block">
+                <span className={isHeroNav ? 'bg-white/20 hover:bg-white/30 text-white border border-white/30 px-4 py-1.5 rounded-full text-xs font-medium transition-colors' : 'bg-[#985991] hover:bg-[#7A4774] text-white px-4 py-1.5 rounded-full text-xs font-medium transition-colors'}>
+                  Sign In
+                </span>
+              </Link>
+              <Link to="/login" className={isHeroNav ? 'md:hidden text-white/80 hover:text-white' : 'md:hidden text-gray-500 hover:text-[#985991]'}>
+                <User size={18} />
+              </Link>
+            </>
+          ) : (
+            <div className="relative" ref={accountMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsAccountOpen((open) => !open)}
+                className={`flex items-center gap-2 rounded-full transition-colors ${
+                  isHeroNav
+                    ? 'border border-white/35 bg-white/10 hover:bg-white/20 pl-1 pr-3 py-1 text-white'
+                    : 'border border-gray-200 bg-white hover:border-[#985991]/35 pl-1 pr-3 py-1 text-gray-900'
+                }`}
+                aria-expanded={isAccountOpen}
+                aria-haspopup="menu"
+              >
+                {profilePic ? (
+                  <img src={profilePic} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div
+                    className="w-8 h-8 rounded-full bg-[#985991] text-white text-[11px] font-semibold flex items-center justify-center shrink-0"
+                    aria-hidden
+                  >
+                    {avatarInitials}
+                  </div>
+                )}
+                <span className="hidden sm:inline text-xs font-semibold max-w-[6.5rem] truncate">{firstName}</span>
+              </button>
+
+              {isAccountOpen && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-gray-100 bg-white shadow-xl py-2 z-[70] text-left"
+                  role="menu"
+                >
+                  <Link
+                    to={dashboardPath}
+                    role="menuitem"
+                    onClick={() => setIsAccountOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-[#985991]"
+                  >
+                    <LayoutGrid size={16} className="text-gray-400 shrink-0" />
+                    My Dashboard
+                  </Link>
+                  <Link
+                    to={ordersPath}
+                    role="menuitem"
+                    onClick={() => setIsAccountOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-[#985991]"
+                  >
+                    <ShoppingBag size={16} className="text-gray-400 shrink-0" />
+                    My Orders
+                  </Link>
+                  <div className="my-1 border-t border-gray-100" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleAccountLogout}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 text-left"
+                  >
+                    <LogOut size={16} className="shrink-0" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         </div>
 

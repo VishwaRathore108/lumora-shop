@@ -15,7 +15,7 @@ const BrandScroll = () => {
 
       gsap.to(tickerRef.current, {
         x: -totalWidth, // Move left by half the width
-        duration: 20,   // Speed (higher = slower)
+        duration: 70,   // Speed (higher = slower)
         ease: "none",
         repeat: -1,     // Infinite loop
         modifiers: {

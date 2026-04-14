@@ -15,6 +15,8 @@ const ProductCard = ({
   badge,
   rating = 4.6,
   reviews = 128,
+  product,
+  onAddToBag,
 }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -41,13 +43,19 @@ const ProductCard = ({
     setIsAdding(true);
     const numericPrice = Number(String(price).replace(/[^\d.]/g, '')) || 0;
 
-    addToCart({
+    const cartPayload = {
       id,
       name,
       image,
       price: numericPrice,
       quantity: 1,
-    });
+    };
+
+    if (typeof onAddToBag === 'function') {
+      onAddToBag(product || cartPayload);
+    } else {
+      addToCart(cartPayload);
+    }
 
     // Lightweight debounce to avoid accidental double‑clicks
     setTimeout(() => setIsAdding(false), 400);

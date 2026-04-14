@@ -1,40 +1,95 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import ProductCard from './ProductCard';
 import { Star, Zap, Clock, ArrowRight } from 'lucide-react';
+import { addToCart } from '../features/cart/cartSlice';
+import {
+  fetchProducts,
+  selectProducts,
+  selectProductsError,
+  selectProductsLoading,
+} from '../features/products/productsSlice';
 
-// Using generic images for demonstration
-// Added stable ids and basic ratings so product clicks & UI feel realistic
-const ALL_PRODUCTS = {
-  'Best Sellers': [
-    { id: 1, name: 'Radiance Serum', price: '₹1,299', image: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=500', badge: 'Hot', rating: 4.8, reviews: 382 },
-    { id: 2, name: 'Velvet Lip Tint', price: '₹799', image: 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=500', badge: 'Best Seller', rating: 4.7, reviews: 241 },
-    { id: 3, name: 'Night Repair Oil', price: '₹1,499', image: 'https://images.unsplash.com/photo-1515688594390-b649af70d282?w=500', badge: '', rating: 4.6, reviews: 190 },
-    { id: 4, name: 'Hydra Gel', price: '₹999', image: 'https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=500', badge: 'Indore Fav', rating: 4.9, reviews: 420 },
-  ],
-  'New Arrivals': [
-    { id: 5, name: 'Vitamin C Toner', price: '₹899', image: 'https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?w=500', badge: 'New', rating: 4.5, reviews: 88 },
-    { id: 6, name: 'Glow Mist', price: '₹599', image: 'https://images.unsplash.com/photo-1629198688000-71f23e745b6e?w=500', badge: 'Just In', rating: 4.4, reviews: 67 },
-    { id: 7, name: 'Peptide Cream', price: '₹1,599', image: 'https://images.unsplash.com/photo-1620916297397-a4a5402a3c6c?w=500', badge: 'New', rating: 4.6, reviews: 54 },
-    { id: 8, name: 'Sun Block Matte', price: '₹699', image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=500', badge: 'Summer', rating: 4.3, reviews: 143 },
-  ],
-  'On Sale': [
-    { id: 9, name: 'Charcoal Mask', price: '₹499', image: 'https://images.unsplash.com/photo-1596462502278-27bfdd403cc2?w=500', badge: '-30% OFF', rating: 4.2, reviews: 110 },
-    { id: 10, name: 'Rose Water', price: '₹299', image: 'https://images.unsplash.com/photo-1608248597279-f99d160bfbb8?w=500', badge: 'Deal', rating: 4.7, reviews: 305 },
-    { id: 11, name: 'Travel Kit', price: '₹999', image: 'https://images.unsplash.com/photo-1556228578-1f1985ca7517?w=500', badge: 'Bundle', rating: 4.4, reviews: 76 },
-    { id: 12, name: 'Hair Serum', price: '₹1,199', image: 'https://images.unsplash.com/photo-1532413992378-f169ac26fff0?w=500', badge: '-15% OFF', rating: 4.5, reviews: 129 },
-  ]
+const formatPrice = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+
+const getProductBadge = (product) => {
+  if ((product.stock || 0) > 0 && product.stock < 10) return 'SELLING FAST';
+  if (product.isFeatured) return 'BEST SELLER';
+  if (product.discount > 0) return `${product.discount}% OFF`;
+  return '';
 };
 
+const mapProductToCard = (product) => {
+  const effectivePrice = product.salePrice != null ? product.salePrice : product.price;
+  return {
+    id: product._id,
+    name: product.name || 'Untitled Product',
+    subtitle: product.shortDescription || '',
+    price: formatPrice(effectivePrice),
+    image: product.images?.[0] || product.coverImage || '',
+    badge: getProductBadge(product),
+    rating: product.averageRating ?? product.rating ?? 0,
+    reviews: product.numOfReviews ?? product.reviewCount ?? 0,
+  };
+};
+
+const ProductSkeleton = () => (
+  <div className="rounded-2xl border border-pink-100/60 bg-white p-4 animate-pulse">
+    <div className="aspect-[4/5] rounded-2xl bg-gray-100 mb-4" />
+    <div className="h-5 bg-gray-100 rounded mb-2" />
+    <div className="h-4 w-3/4 bg-gray-100 rounded mb-3" />
+    <div className="h-4 w-1/2 bg-gray-100 rounded mb-4" />
+    <div className="h-10 rounded-full bg-gray-100" />
+  </div>
+);
+
 const ProductGrid = () => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Best Sellers');
+  const products = useSelector(selectProducts);
+  const isLoading = useSelector(selectProductsLoading);
+  const isError = useSelector(selectProductsError);
+
+  useEffect(() => {
+    dispatch(fetchProducts());
+  }, [dispatch]);
 
   const tabs = [
     { id: 'Best Sellers', icon: <Star size={16} /> },
     { id: 'New Arrivals', icon: <Zap size={16} /> },
     { id: 'On Sale', icon: <Clock size={16} /> },
   ];
+
+  const productsByTab = useMemo(() => {
+    const topProducts = products.slice(0, 12);
+    const bestSellers = topProducts.slice(0, 4);
+    const newArrivals = topProducts.slice(4, 8);
+    const onSale = topProducts.slice(8, 12);
+
+    return {
+      'Best Sellers': bestSellers.length ? bestSellers : topProducts.slice(0, 4),
+      'New Arrivals': newArrivals.length ? newArrivals : topProducts.slice(0, 4),
+      'On Sale': onSale.length ? onSale : topProducts.slice(0, 4),
+    };
+  }, [products]);
+
+  const activeProducts = productsByTab[activeTab] || [];
+
+  const handleAddToBag = (product) => {
+    if (!product?._id) return;
+    const price = Number(product.salePrice ?? product.price ?? 0);
+    dispatch(
+      addToCart({
+        id: product._id,
+        name: product.name || '',
+        image: product.images?.[0] || product.coverImage || '',
+        price,
+        quantity: 1,
+      })
+    );
+  };
 
   // Navigate to shop with the active filter
   const handleViewAll = () => {
@@ -77,10 +132,28 @@ const ProductGrid = () => {
 
         {/* Dynamic Grid */}
         <div key={activeTab} className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 animate-fadeIn">
-          {ALL_PRODUCTS[activeTab].map((product) => (
-            <ProductCard key={product.id} {...product} />
-          ))}
+          {isLoading &&
+            [...Array(4)].map((_, index) => <ProductSkeleton key={`product-skeleton-${index}`} />)}
+
+          {!isLoading &&
+            !isError &&
+            activeProducts.map((product) => (
+              <ProductCard
+                key={product._id}
+                product={product}
+                onAddToBag={handleAddToBag}
+                {...mapProductToCard(product)}
+              />
+            ))}
         </div>
+
+        {!isLoading && isError && (
+          <div className="text-center text-sm text-red-500">Unable to load products right now.</div>
+        )}
+
+        {!isLoading && !isError && activeProducts.length === 0 && (
+          <div className="text-center text-sm text-gray-500">No featured products available yet.</div>
+        )}
 
         {/* --- CENTERED VIEW ALL BUTTON --- */}
         <div className="mt-16 flex justify-center">

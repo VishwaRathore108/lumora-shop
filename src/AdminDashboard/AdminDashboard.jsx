@@ -1,20 +1,11 @@
 import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
 import { Outlet, useLocation } from 'react-router-dom';
 import AdminSidebar from '../AdminDashboard/AdminSidebar';
 import DashboardHeader from '../AdminDashboard/DashboardHeader';
-import { selectUser } from '../features/auth/authSlice';
-import logoImg from '../assets/logo.png';
 
 const AdminDashboard = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const user = useSelector(selectUser);
-  const headerUser = {
-    name: user?.name || 'Admin',
-    email: user?.email || '',
-    image: user?.profileImage || logoImg,
-  };
 
   // Derive the current admin section from the URL for header title
   const pathParts = location.pathname.split('/').filter(Boolean);
@@ -42,7 +33,6 @@ const AdminDashboard = () => {
         {/* HEADER */}
         <DashboardHeader
           title={formatTitle(currentSection)}
-          user={headerUser}
           toggleSidebar={() => setIsSidebarOpen(true)}
         />
 
