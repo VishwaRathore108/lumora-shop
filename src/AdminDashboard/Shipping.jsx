@@ -1,79 +1,143 @@
-import React, { useState } from 'react';
-import { 
-  Truck, 
-  MapPin, 
-  Package, 
-  Search, 
-  Filter, 
-  Printer, 
-  ExternalLink, 
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Truck,
+  MapPin,
+  Search,
+  Printer,
+  ExternalLink,
   AlertTriangle,
   Clock,
   CheckCircle,
   Box,
-  ArrowRight
 } from 'lucide-react';
+import api from '../services/apiClient';
 
 const Shipping = () => {
-  const [activeTab, setActiveTab] = useState('In Transit');
+  const [activeTab, setActiveTab] = useState('inTransit');
   const [searchTerm, setSearchTerm] = useState('');
+  const [metrics, setMetrics] = useState({
+    inTransit: 0,
+    pendingPickup: 0,
+    delivered: { week: 0, month: 0 },
+    exceptions: 0,
+  });
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Mock Shipping Data
-  const SHIPMENTS = [
-    { 
-      id: "SHP-8821", 
-      orderId: "#ORD-7782", 
-      customer: "Ananya Sharma", 
-      destination: "Mumbai, MH", 
-      carrier: "BlueDart", 
-      tracking: "BD123456789", 
-      status: "In Transit", 
-      progress: 60, 
-      eta: "Oct 26, 2024",
-      cost: "₹120"
-    },
-    { 
-      id: "SHP-8822", 
-      orderId: "#ORD-7783", 
-      customer: "Rahul Verma", 
-      destination: "Delhi, DL", 
-      carrier: "Delhivery", 
-      tracking: "DL987654321", 
-      status: "Out for Delivery", 
-      progress: 85, 
-      eta: "Today",
-      cost: "₹80"
-    },
-    { 
-      id: "SHP-8823", 
-      orderId: "#ORD-7784", 
-      customer: "Sneha Kapoor", 
-      destination: "Bangalore, KA", 
-      carrier: "FedEx", 
-      tracking: "FX445566778", 
-      status: "Delivered", 
-      progress: 100, 
-      eta: "Delivered",
-      cost: "₹150"
-    },
-    { 
-      id: "SHP-8824", 
-      orderId: "#ORD-7785", 
-      customer: "Priya Singh", 
-      destination: "Pune, MH", 
-      carrier: "BlueDart", 
-      tracking: "BD998877665", 
-      status: "Exception", 
-      progress: 40, 
-      eta: "Delayed",
-      cost: "₹120"
-    },
+  const [calculatorForm, setCalculatorForm] = useState({
+    pincodeFrom: '460001',
+    pincodeTo: '',
+    weight: '',
+  });
+  const [rateLoading, setRateLoading] = useState(false);
+  const [rateError, setRateError] = useState('');
+  const [rateResult, setRateResult] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchShipments = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const res = await api.get('/admin/shipments');
+        if (!mounted) return;
+        setMetrics(res.data?.metrics || {
+          inTransit: 0,
+          pendingPickup: 0,
+          delivered: { week: 0, month: 0 },
+          exceptions: 0,
+        });
+        setOrders(Array.isArray(res.data?.orders) ? res.data.orders : []);
+      } catch (fetchErr) {
+        if (!mounted) return;
+        setError(fetchErr?.response?.data?.message || 'Failed to load shipment data.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    fetchShipments();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const getShipmentBucket = (order) => {
+    const status = String(order.orderStatus || '').toLowerCase();
+    const paymentStatus = String(order.paymentStatus || '').toLowerCase();
+    if (status === 'cancelled' || paymentStatus === 'failed') return 'exception';
+    if (status === 'delivered') return 'delivered';
+    if (['shipped', 'dispatched'].includes(status)) return 'inTransit';
+    if (['pending', 'confirmed', 'assigned', 'processing'].includes(status)) return 'pending';
+    return 'other';
+  };
+
+  const getStatusMeta = (order) => {
+    const bucket = getShipmentBucket(order);
+    if (bucket === 'delivered') {
+      return { label: 'Delivered', progress: 100, color: 'green' };
+    }
+    if (bucket === 'inTransit') {
+      return { label: 'In Transit', progress: 70, color: 'blue' };
+    }
+    if (bucket === 'pending') {
+      return { label: 'Processing', progress: 25, color: 'orange' };
+    }
+    if (bucket === 'exception') {
+      return { label: 'Exception', progress: 35, color: 'red' };
+    }
+    return { label: String(order.orderStatus || 'Unknown'), progress: 20, color: 'gray' };
+  };
+
+  const filteredShipments = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    return orders.filter((order) => {
+      const bucket = getShipmentBucket(order);
+      const matchesTab = activeTab === 'all' || bucket === activeTab;
+      const orderId = String(order.orderId || order._id || '').toLowerCase();
+      const customer = String(order.customer?.name || '').toLowerCase();
+      const destination = String(order.destination || '').toLowerCase();
+      const matchesSearch =
+        !normalizedSearch ||
+        orderId.includes(normalizedSearch) ||
+        customer.includes(normalizedSearch) ||
+        destination.includes(normalizedSearch);
+      return matchesTab && matchesSearch;
+    });
+  }, [orders, activeTab, searchTerm]);
+
+  const handleCalculatorChange = (event) => {
+    const { name, value } = event.target;
+    setCalculatorForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCheckRates = async (event) => {
+    event.preventDefault();
+    try {
+      setRateLoading(true);
+      setRateError('');
+      setRateResult(null);
+      const payload = {
+        pincodeFrom: calculatorForm.pincodeFrom.trim(),
+        pincodeTo: calculatorForm.pincodeTo.trim(),
+        weight: Number(calculatorForm.weight),
+      };
+      const res = await api.post('/admin/shipping/calculate-rate', payload);
+      setRateResult(res.data?.result || null);
+    } catch (rateErr) {
+      setRateError(rateErr?.response?.data?.message || 'Failed to fetch shipping rate.');
+    } finally {
+      setRateLoading(false);
+    }
+  };
+
+  const tabs = [
+    { key: 'inTransit', label: 'In Transit' },
+    { key: 'pending', label: 'Pending' },
+    { key: 'delivered', label: 'Delivered' },
+    { key: 'exception', label: 'Exception' },
+    { key: 'all', label: 'All' },
   ];
-
-  const filteredShipments = SHIPMENTS.filter(s => 
-    (activeTab === 'All' || s.status === activeTab || (activeTab === 'In Transit' && (s.status === 'In Transit' || s.status === 'Out for Delivery'))) &&
-    (s.orderId.toLowerCase().includes(searchTerm.toLowerCase()) || s.customer.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
 
   return (
     <div className="p-6 md:p-8 space-y-8 animate-in fade-in duration-500">
@@ -95,28 +159,29 @@ const Shipping = () => {
            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Truck size={24}/></div>
            <div>
               <p className="text-xs text-gray-500 font-bold uppercase">In Transit</p>
-              <h3 className="text-2xl font-bold text-gray-800">42</h3>
+              <h3 className="text-2xl font-bold text-gray-800">{metrics.inTransit}</h3>
            </div>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
            <div className="p-3 bg-orange-50 text-orange-500 rounded-xl"><Clock size={24}/></div>
            <div>
               <p className="text-xs text-gray-500 font-bold uppercase">Pending Pickup</p>
-              <h3 className="text-2xl font-bold text-gray-800">12</h3>
+              <h3 className="text-2xl font-bold text-gray-800">{metrics.pendingPickup}</h3>
            </div>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
            <div className="p-3 bg-green-50 text-green-600 rounded-xl"><CheckCircle size={24}/></div>
            <div>
               <p className="text-xs text-gray-500 font-bold uppercase">Delivered (Wk)</p>
-              <h3 className="text-2xl font-bold text-gray-800">185</h3>
+              <h3 className="text-2xl font-bold text-gray-800">{metrics.delivered?.week || 0}</h3>
+              <p className="text-[11px] text-gray-400">Month: {metrics.delivered?.month || 0}</p>
            </div>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
            <div className="p-3 bg-red-50 text-red-500 rounded-xl"><AlertTriangle size={24}/></div>
            <div>
               <p className="text-xs text-gray-500 font-bold uppercase">Exceptions</p>
-              <h3 className="text-2xl font-bold text-gray-800">03</h3>
+              <h3 className="text-2xl font-bold text-gray-800">{metrics.exceptions}</h3>
            </div>
         </div>
       </div>
@@ -129,13 +194,13 @@ const Shipping = () => {
            {/* Tabs & Search */}
            <div className="p-5 border-b border-gray-100 space-y-4">
               <div className="flex gap-4 border-b border-gray-100">
-                {['In Transit', 'Pending', 'Delivered', 'Exception', 'All'].map((tab) => (
+                {tabs.map((tab) => (
                    <button 
-                     key={tab}
-                     onClick={() => setActiveTab(tab)}
-                     className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab ? 'border-[#985991] text-[#985991]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                     key={tab.key}
+                     onClick={() => setActiveTab(tab.key)}
+                     className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.key ? 'border-[#985991] text-[#985991]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                    >
-                     {tab}
+                     {tab.label}
                    </button>
                 ))}
               </div>
@@ -163,31 +228,69 @@ const Shipping = () => {
                     </tr>
                  </thead>
                  <tbody className="divide-y divide-gray-50">
-                    {filteredShipments.map((ship) => (
-                       <tr key={ship.id} className="hover:bg-gray-50 group">
+                    {loading && (
+                      <tr>
+                        <td className="p-4 text-sm text-gray-500" colSpan={4}>Loading shipments...</td>
+                      </tr>
+                    )}
+                    {!loading && error && (
+                      <tr>
+                        <td className="p-4 text-sm text-red-600" colSpan={4}>{error}</td>
+                      </tr>
+                    )}
+                    {!loading && !error && filteredShipments.length === 0 && (
+                      <tr>
+                        <td className="p-4 text-sm text-gray-500" colSpan={4}>No shipments found for current filters.</td>
+                      </tr>
+                    )}
+                    {!loading && !error && filteredShipments.map((ship) => {
+                       const statusMeta = getStatusMeta(ship);
+                       const etaText = ship.eta
+                         ? new Date(ship.eta).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                         : statusMeta.label === 'Delivered'
+                           ? 'Delivered'
+                           : 'N/A';
+                       return (
+                       <tr key={ship._id} className="hover:bg-gray-50 group">
                           <td className="p-4">
                              <div className="flex items-start gap-3">
                                 <div className="p-2 bg-purple-50 text-[#985991] rounded-lg"><Box size={20}/></div>
                                 <div>
-                                   <p className="font-bold text-gray-800">{ship.orderId}</p>
-                                   <p className="text-xs text-gray-500">{ship.customer}</p>
+                                   <p className="font-bold text-gray-800">#{ship.orderId}</p>
+                                   <p className="text-xs text-gray-500">{ship.customer?.name || 'Unknown'}</p>
                                    <p className="text-xs text-gray-400 mt-1 flex items-center gap-1"><MapPin size={10}/> {ship.destination}</p>
                                 </div>
                              </div>
                           </td>
                           <td className="p-4">
-                             <p className="font-medium text-gray-700">{ship.carrier}</p>
-                             <p className="text-xs text-[#985991] font-mono cursor-pointer hover:underline" title="Click to track">{ship.tracking}</p>
+                             <p className="font-medium text-gray-700">Assigned Courier</p>
+                             <p className="text-xs text-[#985991] font-mono">TBD</p>
                           </td>
                           <td className="p-4 min-w-[150px]">
                              <div className="flex justify-between text-xs mb-1">
-                                <span className={`font-bold ${ship.status === 'Exception' ? 'text-red-500' : ship.status === 'Delivered' ? 'text-green-600' : 'text-blue-600'}`}>{ship.status}</span>
-                                <span className="text-gray-500">{ship.eta}</span>
+                                <span className={`font-bold ${
+                                  statusMeta.color === 'red'
+                                    ? 'text-red-500'
+                                    : statusMeta.color === 'green'
+                                      ? 'text-green-600'
+                                      : statusMeta.color === 'orange'
+                                        ? 'text-orange-500'
+                                        : 'text-blue-600'
+                                }`}>{statusMeta.label}</span>
+                                <span className="text-gray-500">{etaText}</span>
                              </div>
                              <div className="w-full bg-gray-100 rounded-full h-1.5">
                                 <div 
-                                  className={`h-1.5 rounded-full ${ship.status === 'Exception' ? 'bg-red-500' : ship.status === 'Delivered' ? 'bg-green-500' : 'bg-blue-500'}`} 
-                                  style={{width: `${ship.progress}%`}}
+                                  className={`h-1.5 rounded-full ${
+                                    statusMeta.color === 'red'
+                                      ? 'bg-red-500'
+                                      : statusMeta.color === 'green'
+                                        ? 'bg-green-500'
+                                        : statusMeta.color === 'orange'
+                                          ? 'bg-orange-500'
+                                          : 'bg-blue-500'
+                                  }`}
+                                  style={{width: `${statusMeta.progress}%`}}
                                 ></div>
                              </div>
                           </td>
@@ -197,7 +300,7 @@ const Shipping = () => {
                              </button>
                           </td>
                        </tr>
-                    ))}
+                    )})}
                  </tbody>
               </table>
            </div>
@@ -211,23 +314,59 @@ const Shipping = () => {
               <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
                  <Truck size={18} className="text-[#985991]"/> Rate Calculator
               </h3>
-              <div className="space-y-3">
+              <form className="space-y-3" onSubmit={handleCheckRates}>
                  <div>
                     <label className="text-xs font-bold text-gray-500 uppercase">Pincode (From)</label>
-                    <input type="text" defaultValue="460001" className="w-full border border-gray-200 rounded-lg p-2 text-sm bg-gray-50 text-gray-500" disabled/>
+                    <input
+                      type="text"
+                      name="pincodeFrom"
+                      value={calculatorForm.pincodeFrom}
+                      onChange={handleCalculatorChange}
+                      className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:border-[#985991] outline-none"
+                    />
                  </div>
                  <div>
                     <label className="text-xs font-bold text-gray-500 uppercase">Pincode (To)</label>
-                    <input type="text" placeholder="e.g. 400001" className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:border-[#985991] outline-none"/>
+                    <input
+                      type="text"
+                      name="pincodeTo"
+                      value={calculatorForm.pincodeTo}
+                      onChange={handleCalculatorChange}
+                      placeholder="e.g. 400001"
+                      className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:border-[#985991] outline-none"
+                    />
                  </div>
                  <div>
                     <label className="text-xs font-bold text-gray-500 uppercase">Weight (kg)</label>
-                    <input type="number" placeholder="0.5" className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:border-[#985991] outline-none"/>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      name="weight"
+                      value={calculatorForm.weight}
+                      onChange={handleCalculatorChange}
+                      placeholder="0.5"
+                      className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:border-[#985991] outline-none"
+                    />
                  </div>
-                 <button className="w-full bg-gray-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-black mt-2">
-                    Check Rates
+                 <button
+                   type="submit"
+                   disabled={rateLoading}
+                   className="w-full bg-gray-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-black mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                 >
+                    {rateLoading ? 'Checking...' : 'Check Rates'}
                  </button>
-              </div>
+                 {rateError && (
+                  <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2">{rateError}</p>
+                 )}
+                 {rateResult && (
+                  <div className="rounded-xl border border-green-100 bg-green-50 p-3 text-sm text-green-900">
+                    <p><span className="font-semibold">Courier:</span> {rateResult.courier}</p>
+                    <p><span className="font-semibold">Rate:</span> ₹{rateResult.rate}</p>
+                    <p><span className="font-semibold">Estimated Days:</span> {rateResult.estimatedDays}</p>
+                  </div>
+                 )}
+              </form>
            </div>
 
            {/* Carrier Performance */}

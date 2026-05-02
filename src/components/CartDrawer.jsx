@@ -3,8 +3,9 @@ import { useCart } from '../context/CartContext';
 import { X, Plus, Minus, Trash2, ShoppingBag, Truck, Store, ArrowRight } from 'lucide-react';
 import gsap from 'gsap';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { calculateShippingPrice, SHIPPING_RULES } from '../utils/cartUtils';
 
-const FREE_SHIPPING_THRESHOLD = 2000; // Set your amount
+const FREE_SHIPPING_THRESHOLD = SHIPPING_RULES.freeShippingMin;
 
 const CartDrawer = () => {
   const { isCartOpen, closeCart, cartItems, removeFromCart, updateQuantity, cartTotal } = useCart();
@@ -25,7 +26,9 @@ const CartDrawer = () => {
 
   // Calculate progress for free shipping
   const progress = Math.min((cartTotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
-  const remaining = FREE_SHIPPING_THRESHOLD - cartTotal;
+  const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - cartTotal);
+  const shippingPrice = calculateShippingPrice(cartTotal);
+  const totalWithShipping = cartTotal + (deliveryMode === 'pickup' ? 0 : shippingPrice);
 
   // Animation & global side‑effects
   useEffect(() => {
@@ -123,9 +126,9 @@ const CartDrawer = () => {
           <div className="px-5 py-4 bg-[#FDF2F8] shrink-0">
             <div className="flex items-center gap-2 text-sm font-medium text-gray-800 mb-2">
               {progress === 100 ? (
-                <span className="flex items-center gap-1 text-green-700"><Truck size={16} /> You've unlocked <b>FREE Shipping</b>!</span>
+                <span className="flex items-center gap-1 text-green-700"><Truck size={16} /> Yay! You unlocked <b>FREE Delivery</b>!</span>
               ) : (
-                <span>Add <span className="text-[#985991]">₹{remaining}</span> for <b>Free Shipping</b></span>
+                <span>Add <span className="text-[#985991]">₹{remaining.toFixed(0)}</span> more to get <b>FREE Delivery</b>! 🚚</span>
               )}
             </div>
             <div className="h-2 w-full bg-white rounded-full overflow-hidden border border-pink-100">
@@ -239,13 +242,13 @@ const CartDrawer = () => {
               </div>
               <div className="flex justify-between text-sm text-gray-500">
                 <span>Shipping</span>
-                <span className={progress === 100 || deliveryMode === 'pickup' ? 'text-green-600 font-medium' : ''}>
-                  {deliveryMode === 'pickup' ? 'FREE' : (progress === 100 ? 'FREE' : '₹99')}
+                <span className={shippingPrice === 0 || deliveryMode === 'pickup' ? 'text-green-600 font-medium' : ''}>
+                  {deliveryMode === 'pickup' ? 'FREE' : (shippingPrice === 0 ? 'FREE' : `₹${shippingPrice}`)}
                 </span>
               </div>
               <div className="flex justify-between text-lg font-serif font-medium text-gray-900 pt-2 border-t border-gray-200">
                 <span>Total</span>
-                <span>₹{cartTotal + (deliveryMode === 'pickup' || progress === 100 ? 0 : 99)}</span>
+                <span>₹{totalWithShipping}</span>
               </div>
             </div>
 

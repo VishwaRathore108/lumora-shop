@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sparkles, ArrowRight } from 'lucide-react';
 
-const SkinQuiz = () => {
+const SkinQuiz = ({ onStartQuiz }) => {
     return (
         <section className="py-20 bg-gradient-to-b from-white via-[#FFF7FB] to-white border-y border-pink-100/60">
             <div className="max-w-7xl mx-auto px-4 grid gap-10 md:grid-cols-[1.1fr,1fr] items-center">
@@ -21,7 +21,11 @@ const SkinQuiz = () => {
                         <li>• Tailored to Indore&apos;s weather and pollution levels</li>
                         <li>• Save your results and shop your edit instantly</li>
                     </ul>
-                    <button className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-[#985991] text-white text-sm font-semibold shadow-lg shadow-rose-200 hover:bg-[#7A4774] transition-all">
+                    <button
+                        type="button"
+                        onClick={onStartQuiz}
+                        className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-[#985991] text-white text-sm font-semibold shadow-lg shadow-rose-200 hover:bg-[#7A4774] transition-all"
+                    >
                         Start Your Quiz
                         <ArrowRight className="w-4 h-4" />
                     </button>

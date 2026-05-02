@@ -5,7 +5,9 @@ import {
   closeCart as closeCartAction,
   removeFromCart as removeFromCartAction,
   selectCartItems,
+  selectCartGrandTotal,
   selectCartOpen,
+  selectCartShippingPrice,
   selectCartTotal,
   setCartOpen as setCartOpenAction,
   updateQuantity as updateQuantityAction,
@@ -18,6 +20,8 @@ export const CartProvider = ({ children }) => {
   const isCartOpen = useSelector(selectCartOpen);
   const cartItems = useSelector(selectCartItems);
   const cartTotal = useSelector(selectCartTotal);
+  const shippingPrice = useSelector(selectCartShippingPrice);
+  const grandTotal = useSelector(selectCartGrandTotal);
 
   const addToCart = (item) => {
     dispatch(addToCartAction(item));
@@ -43,6 +47,8 @@ export const CartProvider = ({ children }) => {
     removeFromCart,
     updateQuantity,
     cartTotal,
+    shippingPrice,
+    grandTotal,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

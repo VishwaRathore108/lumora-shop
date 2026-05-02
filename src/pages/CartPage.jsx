@@ -4,6 +4,7 @@ import Footer from '../components/Footer';
 import { useCart } from '../context/CartContext';
 import { Trash2, Plus, Minus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { calculateShippingPrice, SHIPPING_RULES } from '../utils/cartUtils';
 
 const CartPage = () => {
     const { cartItems, cartTotal, updateQuantity, removeFromCart } = useCart();
@@ -18,6 +19,10 @@ const CartPage = () => {
     };
 
     const itemsCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const shippingPrice = calculateShippingPrice(cartTotal);
+    const remainingForFreeDelivery = Math.max(0, SHIPPING_RULES.freeShippingMin - cartTotal);
+    const progressPercent = Math.min((cartTotal / SHIPPING_RULES.freeShippingMin) * 100, 100);
+    const grandTotal = cartTotal + shippingPrice;
 
     return (
         <>
@@ -32,6 +37,27 @@ const CartPage = () => {
                             ? 'Your bag is currently empty.'
                             : `${itemsCount} item${itemsCount > 1 ? 's' : ''} in your bag.`}
                     </p>
+                    {cartItems.length > 0 && (
+                        <section className="mb-6 rounded-2xl border border-pink-100 bg-[#FDF2F8] p-4">
+                            {cartTotal >= SHIPPING_RULES.freeShippingMin ? (
+                                <p className="inline-flex items-center rounded-full bg-green-100 text-green-700 px-3 py-1 text-sm font-medium">
+                                    Yay! You unlocked FREE Delivery! 🎉
+                                </p>
+                            ) : (
+                                <>
+                                    <p className="text-sm font-medium text-gray-800 mb-2">
+                                        Add ₹{remainingForFreeDelivery.toFixed(0)} more to get FREE Delivery! 🚚
+                                    </p>
+                                    <div className="h-2 w-full rounded-full border border-pink-100 bg-white overflow-hidden">
+                                        <div
+                                            className="h-full bg-[#985991] transition-all duration-500 ease-out"
+                                            style={{ width: `${progressPercent}%` }}
+                                        />
+                                    </div>
+                                </>
+                            )}
+                        </section>
+                    )}
 
                     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr),minmax(0,1fr)] gap-10">
                         {/* Items list */}
@@ -123,13 +149,15 @@ const CartPage = () => {
                                 </div>
                                 <div className="flex justify-between">
                                     <span>Shipping</span>
-                                    <span className="text-gray-800">Calculated at checkout</span>
+                                    <span className={`text-gray-800 ${shippingPrice === 0 ? 'text-green-700 font-semibold' : ''}`}>
+                                        {shippingPrice === 0 ? 'FREE' : `₹${shippingPrice}`}
+                                    </span>
                                 </div>
                             </div>
                             <div className="border-t border-gray-200 pt-3 mb-4 flex justify-between items-center">
                                 <span className="text-sm font-medium text-gray-800">Total</span>
                                 <span className="text-xl font-serif font-semibold text-gray-900">
-                                    ₹{cartTotal}
+                                    ₹{grandTotal}
                                 </span>
                             </div>
                             <button

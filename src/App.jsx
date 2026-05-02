@@ -12,6 +12,7 @@ import GlowEdit from './components/GlowEdit';
 import OffersSection from './components/OffersSection';
 import ProductGrid from './components/ProductGrid';
 import SkinQuiz from './components/SkinQuiz';
+import SkinQuizModal from './components/SkinQuiz/SkinQuizModal';
 // import Testimonials from './components/Testimonials';
 import Footer from './components/Footer';
 import StoreLocations from './components/StoreLocations';
@@ -79,6 +80,8 @@ import EditProduct from './AdminDashboard/EditProduct';
 import MegaOffers from './components/MegaOffers';
 
 const Home = () => {
+  const [isQuizOpen, setIsQuizOpen] = useState(false);
+
   return (
     <div className="">
       <Navbar />
@@ -89,13 +92,14 @@ const Home = () => {
       <GlowEdit />
       <OffersSection />
       <ProductGrid />
-      <SkinQuiz />
+      <SkinQuiz onStartQuiz={() => setIsQuizOpen(true)} />
       {/* <Testimonials /> */}
       <StoreLocations />
       <BrandScroll />
       <Features />
       <Footer />
       <CartDrawer />
+      <SkinQuizModal isOpen={isQuizOpen} onClose={() => setIsQuizOpen(false)} />
     </div>
   );
 };

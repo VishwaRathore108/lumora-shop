@@ -26,6 +26,7 @@ const Shop = () => {
   const sort = searchParams.get('sort') || '';
   const searchFromState = location.state?.searchQuery || '';
   const searchFromUrl = searchParams.get('search') || searchParams.get('q') || '';
+  const aiKeywordsFromState = location.state?.aiKeywords || '';
 
   // Stable array refs so useCallback/useEffect don't re-run every render
   const brands = useMemo(
@@ -54,9 +55,73 @@ const Shop = () => {
   const [loading, setLoading] = useState(true);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [aiRecommendations, setAiRecommendations] = useState(
+    Array.isArray(location.state?.aiRecommendations) ? location.state.aiRecommendations : []
+  );
 
   const searchTerm = searchFromState || searchFromUrl;
   const hasFilters = !!(category || subcategory || filter || brands.length || searchTerm || minPrice || maxPrice || productTypes.length || variants.length);
+  const hasAiRecommendations = aiRecommendations.length > 0;
+
+  useEffect(() => {
+    if (Array.isArray(location.state?.aiRecommendations)) {
+      setAiRecommendations(location.state.aiRecommendations);
+    }
+  }, [location.state]);
+
+  const aiKeywords = useMemo(() => {
+    if (aiKeywordsFromState) {
+      return aiKeywordsFromState
+        .toLowerCase()
+        .split(/\s+/)
+        .map((word) => word.trim())
+        .filter((word) => word.length > 3);
+    }
+    if (!hasAiRecommendations) return [];
+    const stopWords = new Set([
+      'apply', 'start', 'use', 'daily', 'night', 'morning', 'week', 'times', 'for', 'with', 'and',
+      'the', 'your', 'step', 'spf', 'am', 'pm', 'treatment', 'routine', 'to', 'a', 'of', 'at',
+    ]);
+    const prioritizedTerms = [
+      'cleanser', 'serum', 'moisturizer', 'sunscreen', 'spf', 'vitamin c', 'niacinamide', 'salicylic',
+      'retinol', 'azelaic', 'gel', 'cream', 'barrier', 'peptide', 'hyaluronic',
+    ];
+
+    const tokenized = aiRecommendations
+      .join(' ')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((word) => word.length > 2 && !stopWords.has(word));
+
+    const fromPriority = prioritizedTerms.filter((term) =>
+      aiRecommendations.join(' ').toLowerCase().includes(term)
+    );
+
+    return Array.from(new Set([...fromPriority, ...tokenized]));
+  }, [aiRecommendations, hasAiRecommendations, aiKeywordsFromState]);
+
+  const hasAiFilter = aiKeywords.length > 0;
+
+  const displayedProducts = useMemo(() => {
+    if (!hasAiFilter) return products;
+    return products.filter((product) => {
+      const searchableText = [
+        product?.name,
+        product?.shortDescription,
+        product?.description,
+        product?.categoryName,
+        product?.subcategoryName,
+        product?.productType,
+        product?.brand,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return aiKeywords.some((keyword) => searchableText.includes(keyword.toLowerCase()));
+    });
+  }, [products, hasAiFilter, aiKeywords]);
 
   const fetchFilterOptions = useCallback(async () => {
     setOptionsLoading(true);
@@ -203,6 +268,11 @@ const Shop = () => {
     navigate('/shop', { replace: true });
   };
 
+  const clearAiRecommendations = () => {
+    setAiRecommendations([]);
+    navigate('/shop', { replace: true, state: {} });
+  };
+
   const mapProductToCard = (p) => {
     const effectivePrice = p.salePrice != null ? p.salePrice : p.price;
     let badge = null;
@@ -281,10 +351,25 @@ const Shop = () => {
             />
 
             <main className="flex-1 min-w-0 w-full">
+              {hasAiFilter && (
+                <div className="mb-4 lg:mb-6 rounded-2xl border border-pink-100 bg-[#FFF7FB] px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-[#7A4774] font-medium">
+                    ✨ Showing products recommended by your AI Dermatologist
+                  </p>
+                  <button
+                    type="button"
+                    onClick={clearAiRecommendations}
+                    className="text-sm text-[#985991] underline hover:text-[#7A4774]"
+                  >
+                    Clear Recommendations
+                  </button>
+                </div>
+              )}
+
               {/* Desktop toolbar: count + sort */}
               <div className="hidden lg:flex items-center justify-between gap-3 mb-4 lg:mb-6">
                 <p className="text-sm text-gray-500">
-                  {!loading && !error && `${pagination.total} product${pagination.total !== 1 ? 's' : ''}`}
+                  {!loading && !error && `${displayedProducts.length} product${displayedProducts.length !== 1 ? 's' : ''}`}
                 </p>
                 <select
                   value={sort}
@@ -325,10 +410,10 @@ const Shop = () => {
                     Retry
                   </button>
                 </div>
-              ) : products.length > 0 ? (
+              ) : displayedProducts.length > 0 ? (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-                    {products.map((product) => (
+                    {displayedProducts.map((product) => (
                       <ProductCard key={product._id} {...mapProductToCard(product)} />
                     ))}
                   </div>

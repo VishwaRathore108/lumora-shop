@@ -34,6 +34,7 @@ import {
   selectEligibleCouponsLoading,
   validateCoupon,
 } from '../features/coupons/couponSlice';
+import { calculateShippingPrice } from '../utils/cartUtils';
 
 const INITIAL_ADDRESS_FORM = {
   fullName: '',
@@ -86,7 +87,7 @@ const Checkout = () => {
     [cartItems]
   );
 
-  const shippingCost = useMemo(() => (cartTotal >= 999 ? 0 : 99), [cartTotal]);
+  const shippingCost = useMemo(() => calculateShippingPrice(cartTotal), [cartTotal]);
   const merchandiseAfterDiscount = appliedCoupon
     ? Number(appliedCoupon.merchandiseAfterDiscount ?? cartTotal)
     : cartTotal;
@@ -208,7 +209,14 @@ const Checkout = () => {
       }
 
       const [orderRes, keyRes] = await Promise.all([
-        api.post('/payments/create-order', { amount: finalTotal, currency: 'INR' }),
+        api.post('/payments/create-order', {
+          currency: 'INR',
+          items: cartItems.map((item) => ({
+            id: item.id,
+            quantity: item.quantity,
+          })),
+          ...(appliedCoupon?.code ? { couponCode: appliedCoupon.code } : {}),
+        }),
         api.get('/payments/key'),
       ]);
 
@@ -588,7 +596,7 @@ const Checkout = () => {
 
               <div className="space-y-2 text-sm text-gray-600 mb-4">
                 <div className="flex justify-between">
-                  <span>Original total (items)</span>
+                  <span>Subtotal</span>
                   <span>₹{Number(cartTotal).toLocaleString('en-IN')}</span>
                 </div>
                 {appliedCoupon && discountAmount > 0 && (
@@ -607,13 +615,13 @@ const Checkout = () => {
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span>Shipping</span>
+                  <span>Shipping Fee</span>
                   <span>{shippingCost === 0 ? 'FREE' : `₹${shippingCost.toLocaleString('en-IN')}`}</span>
                 </div>
               </div>
 
               <div className="border-t border-gray-200 pt-3 mb-4 flex justify-between items-center">
-                <span className="text-sm font-semibold text-gray-900">Final amount</span>
+                <span className="text-sm font-semibold text-gray-900">Grand Total</span>
                 <span className="text-2xl font-serif text-gray-900">
                   ₹{finalTotal.toLocaleString('en-IN')}
                 </span>
