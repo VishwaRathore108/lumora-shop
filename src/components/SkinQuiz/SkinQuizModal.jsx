@@ -1,11 +1,21 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Sparkles, Sun, Moon, X, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { analyzeSkinQuiz } from '../../services/quizService';
 
 const skinTypeOptions = ['Oily', 'Dry', 'Combination', 'Sensitive', 'Normal'];
 const climateOptions = ['Hot & Dry', 'Hot & Humid', 'Cold & Dry'];
-const concernOptions = ['Acne', 'Dark Spots', 'Anti-aging', 'Dryness'];
+const concernOptions = [
+  'Acne',
+  'Dark Spots',
+  'Anti-aging',
+  'Dryness',
+  'Dullness',
+  'Large Pores',
+  'Pigmentation',
+  'Uneven Texture',
+  'Blackheads',
+];
 
 const baseCardClasses =
   'rounded-xl border px-4 py-3 text-sm font-medium transition-all text-left';
@@ -55,6 +65,7 @@ const SkinQuizModal = ({ isOpen, onClose }) => {
     selfieBase64: '',
   });
   const [selfiePreview, setSelfiePreview] = useState('');
+  const selfieInputRef = useRef(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
@@ -89,7 +100,17 @@ const SkinQuizModal = ({ isOpen, onClose }) => {
       if (!response?.success || !response?.data) {
         throw new Error(response?.message || 'Unable to analyze quiz right now.');
       }
-      setResult(response.data);
+      const data = response.data;
+      const tip = typeof data?.expertTip === 'string' ? data.expertTip : '';
+      if (tip.includes('INVALID_IMAGE_ERROR')) {
+        alert('Oops! Please upload a clear picture of a human face, not an object. Try again!');
+        setForm((prev) => ({ ...prev, selfieBase64: '' }));
+        setSelfiePreview('');
+        if (selfieInputRef.current) selfieInputRef.current.value = '';
+        setResult(null);
+        return;
+      }
+      setResult(data);
     } catch (err) {
       setError(err?.response?.data?.message || err.message || 'Unable to analyze quiz right now.');
     } finally {
@@ -198,6 +219,7 @@ const SkinQuizModal = ({ isOpen, onClose }) => {
                   Upload/Capture a Selfie (Optional)
                 </label>
                 <input
+                  ref={selfieInputRef}
                   type="file"
                   accept="image/*"
                   capture="user"
